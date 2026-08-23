@@ -5,7 +5,7 @@
 
 Audit+, durcissement, FileGuard, certificats, RepoRadar, secrets, permissions.
 
-**1.3.1** — [releases](https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases) · GPL-3.0-or-later · © 2026 Mr-Aurevo-X
+**1.3.2** — [releases](https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases) · GPL-3.0-or-later · © 2026 Mr-Aurevo-X
 
 Matrice : Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper). Local-first, pas de sync auto des dépôts.
 
@@ -18,11 +18,12 @@ Matrice : Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper
 Prérequis : [Flatpak](https://flatpak.org/setup/) + runtime GNOME 49 (installé automatiquement depuis Flathub au premier `flatpak install`).
 
 ```bash
-wget -O org.mraurevox.HubSecurite.flatpak \
-  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/org.mraurevox.HubSecurite.flatpak
+rm -f org.mraurevox.HubSecurite.flatpak
+wget --no-continue -O org.mraurevox.HubSecurite.flatpak \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.2/org.mraurevox.HubSecurite.flatpak
 flatpak install --user -y --reinstall ./org.mraurevox.HubSecurite.flatpak
-wget -O INSTALLER-RACCOURCI-FLATPAK.sh \
-  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/INSTALLER-RACCOURCI-FLATPAK.sh
+wget --no-continue -O INSTALLER-RACCOURCI-FLATPAK.sh \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.2/INSTALLER-RACCOURCI-FLATPAK.sh
 bash ./INSTALLER-RACCOURCI-FLATPAK.sh
 flatpak run org.mraurevox.HubSecurite
 ```
@@ -57,11 +58,12 @@ Matrix: Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper).
 ### Install (Flatpak)
 
 ```bash
-wget -O org.mraurevox.HubSecurite.flatpak \
-  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/org.mraurevox.HubSecurite.flatpak
+rm -f org.mraurevox.HubSecurite.flatpak
+wget --no-continue -O org.mraurevox.HubSecurite.flatpak \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.2/org.mraurevox.HubSecurite.flatpak
 flatpak install --user -y --reinstall ./org.mraurevox.HubSecurite.flatpak
-wget -O INSTALLER-RACCOURCI-FLATPAK.sh \
-  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/INSTALLER-RACCOURCI-FLATPAK.sh
+wget --no-continue -O INSTALLER-RACCOURCI-FLATPAK.sh \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.2/INSTALLER-RACCOURCI-FLATPAK.sh
 bash ./INSTALLER-RACCOURCI-FLATPAK.sh
 flatpak run org.mraurevox.HubSecurite
 ```
