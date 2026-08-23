@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from core import host, i18n, packages
+from core import host, i18n, packages, updates
 from core.paths import config_dir
 
 _SERVER_RE = re.compile(r"^\s*Server\s*=\s*(\S+)", re.IGNORECASE)
@@ -28,6 +28,13 @@ _DEFAULT_ALLOW = {
     "archive.ubuntu.com",
     "security.ubuntu.com",
     "packages.microsoft.com",
+    "mirrors.fedoraproject.org",
+    "download.fedoraproject.org",
+    "dl.fedoraproject.org",
+    "rpmfusion.org",
+    "download1.rpmfusion.org",
+    "download.opensuse.org",
+    "mirrors.opensuse.org",
 }
 
 
@@ -103,6 +110,50 @@ def parse_pacman_mirrorlist(text: str) -> list[str]:
     return urls
 
 
+def parse_rpm_repo(text: str) -> list[str]:
+    urls: list[str] = []
+    enabled = True
+    pending: list[str] = []
+
+    def flush() -> None:
+        nonlocal enabled, pending
+        if enabled:
+            urls.extend(pending)
+        pending = []
+        enabled = True
+
+    for raw in (text or "").splitlines():
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            flush()
+            continue
+        key, _, value = stripped.partition("=")
+        name = key.strip().lower()
+        val = value.strip()
+        if name == "enabled":
+            enabled = val.lower() not in {"0", "false", "no", "off"}
+        elif name in {"baseurl", "metalink", "mirrorlist"} and val:
+            pending.append(val)
+    flush()
+    return urls
+
+
+def parse_zypper_unneeded(text: str) -> list[str]:
+    names: list[str] = []
+    for raw in (text or "").splitlines():
+        if "|" not in raw:
+            continue
+        parts = [part.strip() for part in raw.split("|")]
+        if len(parts) < 3 or parts[0].lower() == "s" or parts[2].lower() == "name":
+            continue
+        if set(raw.strip()) <= {"-", "+", "|", " "}:
+            continue
+        names.append(parts[2])
+    return names
+
+
 def parse_apt_sources(text: str) -> list[str]:
     urls: list[str] = []
     for line in (text or "").splitlines():
@@ -137,6 +188,16 @@ def collect_source_urls() -> list[dict[str, Any]]:
             continue
         for url in parse_apt_sources(_read_text(path)):
             rows.append({"kind": "apt", "path": str(path), "url": url})
+    yum_d = Path("/etc/yum.repos.d")
+    if yum_d.is_dir():
+        for path in sorted(p for p in yum_d.iterdir() if p.suffix == ".repo"):
+            for url in parse_rpm_repo(_read_text(path)):
+                rows.append({"kind": "dnf", "path": str(path), "url": url})
+    zypp_d = Path("/etc/zypp/repos.d")
+    if zypp_d.is_dir():
+        for path in sorted(p for p in zypp_d.iterdir() if p.suffix == ".repo"):
+            for url in parse_rpm_repo(_read_text(path)):
+                rows.append({"kind": "zypper", "path": str(path), "url": url})
     return rows
 
 
@@ -174,19 +235,25 @@ def _run_lines(argv: list[str], timeout: float = 8.0) -> list[str]:
     return [line.strip() for line in (out.stdout or "").splitlines() if line.strip()]
 
 
-def collect_orphans() -> list[str]:
+def collect_orphans() -> dict[str, Any]:
     if host.which("pacman"):
-        return [line.split()[0] for line in _run_lines(["pacman", "-Qtd"]) if line.split()]
+        names = [line.split()[0] for line in _run_lines(["pacman", "-Qtd"]) if line.split()]
+        return {"names": names, "available": True}
     if host.which("deborphan"):
-        return _run_lines(["deborphan"])
-    return []
+        return {"names": _run_lines(["deborphan"]), "available": True}
+    if host.which("dnf"):
+        lines = _run_lines(["dnf", "-C", "repoquery", "--unneeded", "--qf=%{name}"], timeout=20.0)
+        return {"names": lines, "available": True}
+    if host.which("zypper"):
+        text = "\n".join(
+            _run_lines(["zypper", "--non-interactive", "--no-refresh", "packages", "--unneeded"], timeout=20.0)
+        )
+        return {"names": parse_zypper_unneeded(text), "available": True}
+    return {"names": [], "available": False}
 
 
-def pending_updates() -> int:
-    lines = _run_lines(["checkupdates"])
-    if not lines and host.which("pacman"):
-        lines = _run_lines(["pacman", "-Qqu"])
-    return len(lines)
+def pending_updates() -> dict[str, Any]:
+    return updates.pending_updates()
 
 
 def scan() -> dict[str, Any]:
@@ -196,12 +263,15 @@ def scan() -> dict[str, Any]:
         classified = classify_url(str(item.get("url") or ""), allow)
         sources.append({**item, **classified})
     orphans = collect_orphans()
-    updates = pending_updates()
+    pending = pending_updates()
     warn = sum(1 for item in sources if item.get("severity") == "warn")
     return {
         "sources": sources,
-        "orphans": orphans,
-        "updates": updates,
+        "orphans": list(orphans.get("names") or []),
+        "orphans_available": bool(orphans.get("available")),
+        "updates": pending.get("count"),
+        "updates_known": bool(pending.get("known")),
+        "updates_backend": str(pending.get("backend") or ""),
         "warn": warn,
         "managers": packages.available_managers(),
     }

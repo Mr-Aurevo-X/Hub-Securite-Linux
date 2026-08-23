@@ -33,6 +33,7 @@ def available_managers() -> dict[str, bool]:
     return {
         "apt": shutil.which("dpkg-query") is not None or shutil.which("apt-get") is not None,
         "dnf": shutil.which("dnf") is not None,
+        "zypper": shutil.which("zypper") is not None,
         "pacman": shutil.which("pacman") is not None,
         "flatpak": shutil.which("flatpak") is not None,
         "snap": shutil.which("snap") is not None,

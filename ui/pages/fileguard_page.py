@@ -34,6 +34,10 @@ class FileGuardPage:
         hint = Gtk.Label(label=i18n.t("fileguard_hint"), wrap=True, xalign=0)
         hint.add_css_class("dim-label")
         box.append(hint)
+        self._paths_lbl = Gtk.Label(label="", wrap=True, xalign=0, selectable=True)
+        self._paths_lbl.add_css_class("title-2")
+        box.append(self._paths_lbl)
+        self._show_paths()
         scan = Gtk.Button(label=i18n.t("fileguard_scan"))
         scan.add_css_class("suggested-action")
         scan.connect("clicked", lambda *_: self._scan())
@@ -61,6 +65,13 @@ class FileGuardPage:
         self._list.add_css_class("boxed-list")
         box.append(common.scrolled(self._list))
         return common.scrolled(box)
+
+    def _show_paths(self) -> None:
+        paths = fileguard.load_watch_paths() or fileguard.default_watch_paths()
+        if paths:
+            self._paths_lbl.set_text(i18n.t("fileguard_watching", paths=", ".join(str(path) for path in paths)))
+        else:
+            self._paths_lbl.set_text(i18n.t("fileguard_watching_none"))
 
     def _selected(self) -> dict[str, Any] | None:
         row = self._list.get_selected_row()
@@ -100,6 +111,7 @@ class FileGuardPage:
             if error is not None:
                 show_toast(self._toast, i18n.t("fileguard_failed", error=str(error)), 6)
                 return
+            self._show_paths()
             self._fill(result if isinstance(result, dict) else {})
             show_toast(self._toast, "OK")
 
@@ -117,6 +129,7 @@ class FileGuardPage:
 
     def _add_path(self, folder: Path) -> None:
         fileguard.add_watch_path(folder)
+        self._show_paths()
         self._scan()
 
     def _confirm_freeze(self) -> None:

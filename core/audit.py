@@ -15,7 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from core import authlog, connections, file_permissions, firewall, host, i18n, secretscan
+from core import authlog, connections, file_permissions, firewall, host, i18n, secretscan, updates
 from core.paths import config_dir
 
 Check = dict[str, str]
@@ -81,26 +81,10 @@ def _permissions_check() -> tuple[Check, int]:
 
 
 def _updates_check() -> tuple[Check, int]:
-    lines = _run_lines(["checkupdates"])
-    if lines is None:
-        lines = _run_lines(["pacman", "-Qqu"])
-    if lines is None and Path("/usr/lib/update-notifier/apt-check").is_file():
-        try:
-            out = host.run(
-                ["/usr/lib/update-notifier/apt-check"],
-                capture_output=True,
-                text=True,
-                timeout=4,
-                check=False,
-            )
-            raw = (out.stderr or out.stdout or "").strip()
-            pending = int(raw.split(";")[0]) if raw else 0
-            lines = [""] * pending
-        except (subprocess.SubprocessError, OSError, ValueError):
-            lines = None
-    if lines is None:
+    info = updates.pending_updates()
+    if not info.get("known"):
         return {"id": "updates", "label": i18n.t("audit_updates_hint"), "severity": "info"}, 0
-    count = len(lines)
+    count = int(info.get("count") or 0)
     if count:
         return (
             {"id": "updates", "label": i18n.t("audit_updates_pending", count=count), "severity": "warn"},

@@ -23,6 +23,9 @@ class RepoRadarPage:
         hint = Gtk.Label(label=i18n.t("reporadar_hint"), wrap=True, xalign=0)
         hint.add_css_class("dim-label")
         box.append(hint)
+        self._managers = Gtk.Label(label="", wrap=True, xalign=0)
+        self._managers.add_css_class("heading")
+        box.append(self._managers)
         scan = Gtk.Button(label=i18n.t("reporadar_scan"))
         scan.add_css_class("suggested-action")
         scan.connect("clicked", lambda *_: self._scan())
@@ -63,15 +66,19 @@ class RepoRadarPage:
     def _fill(self, report: dict[str, Any]) -> None:
         common.clear_list(self._list)
         self._sources = [item for item in (report.get("sources") or []) if isinstance(item, dict)]
-        updates = int(report.get("updates") or 0)
-        self._summary.set_text(
-            f"{len(self._sources)} · warn {report.get('warn') or 0} · {i18n.t('reporadar_updates', count=updates)}"
-            if self._sources
-            else i18n.t("reporadar_empty")
-        )
+        managers = [name for name, ok in (report.get("managers") or {}).items() if ok]
+        self._managers.set_text(i18n.t("reporadar_managers", names=", ".join(managers) or "—"))
+        if report.get("updates_known"):
+            maj = i18n.t("reporadar_updates", count=int(report.get("updates") or 0))
+        else:
+            maj = i18n.t("reporadar_updates_unknown")
+        if self._sources:
+            self._summary.set_text(f"{len(self._sources)} · warn {report.get('warn') or 0} · {maj}")
+        else:
+            self._summary.set_text(f"{i18n.t('reporadar_no_sources')} · {maj}")
         if not self._sources:
             row = Adw.ActionRow()
-            row.set_title(i18n.t("reporadar_empty"))
+            row.set_title(i18n.t("reporadar_no_sources"))
             self._list.append(row)
         for item in self._sources:
             row = Adw.ActionRow()
@@ -89,7 +96,12 @@ class RepoRadarPage:
             )
             self._list.append(row)
         orphans = [str(name) for name in (report.get("orphans") or []) if name]
-        self._orphans.set_text("\n".join(orphans) if orphans else "—")
+        if not report.get("orphans_available"):
+            self._orphans.set_text(i18n.t("reporadar_orphans_unavailable"))
+        elif orphans:
+            self._orphans.set_text("\n".join(orphans))
+        else:
+            self._orphans.set_text("—")
 
     def _scan(self) -> None:
         def work() -> dict[str, Any]:

@@ -9,6 +9,8 @@
 
 Audit+, durcissement, FileGuard, certificats, RepoRadar, secrets, permissions. Repo Linux dédié.
 
+Matrice : Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper). Local-first, pas de sync auto des dépôts. QA manuelle Mint/Fedora quand la machine est là : scan audit, Appliquer fw, Radar sources, FileGuard chemins.
+
 - **GitHub** : `Mr-Aurevo-X/Hub-Securite-Linux` (privé)
 - **Plateforme** : voir [linux-platform](https://github.com/Mr-Aurevo-X/linux-platform)
 
@@ -35,6 +37,8 @@ Local-first, pas de télémétrie. Vérif. GitHub au démarrage (désactivable).
 ## English
 
 Audit+, hardening, FileGuard, certificates, RepoRadar, secrets, permissions. Dedicated Linux repo.
+
+Matrix: Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper). Local-first, no auto repo sync.
 
 - **GitHub**: `Mr-Aurevo-X/Hub-Securite-Linux` (private)
 - **Platform**: see [linux-platform](https://github.com/Mr-Aurevo-X/linux-platform)

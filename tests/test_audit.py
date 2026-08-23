@@ -50,6 +50,29 @@ def test_evaluate_has_winaudit_style_checks() -> None:
     assert "duration_sec" in report
 
 
+def test_updates_check_uses_shared_helper(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        audit.updates,
+        "pending_updates",
+        lambda: {"known": True, "count": 4, "backend": "dnf"},
+    )
+    item, penalty = audit._updates_check()
+    assert item["id"] == "updates"
+    assert item["severity"] == "warn"
+    assert penalty > 0
+
+
+def test_updates_check_unknown_is_info(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        audit.updates,
+        "pending_updates",
+        lambda: {"known": False, "count": None, "backend": "dnf"},
+    )
+    item, penalty = audit._updates_check()
+    assert item["severity"] == "info"
+    assert penalty == 0
+
+
 def test_evaluate_score_drops_on_inactive_firewall(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_all_checkers(
         monkeypatch,
