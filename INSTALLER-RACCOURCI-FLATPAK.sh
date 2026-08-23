@@ -17,8 +17,8 @@ else
 Type=Application
 Version=1.0
 Name=Hub Sécurité
-Comment=Gestion système Linux (santé, monitoring, paquets, clichés)
-Comment[en]=Linux system manager (monitoring, services, cleaner)
+Comment=Audit et durcissement local Linux
+Comment[en]=Local Linux audit and hardening
 Exec=flatpak run ${APP_ID}
 Icon=${APP_ID}
 Terminal=false
