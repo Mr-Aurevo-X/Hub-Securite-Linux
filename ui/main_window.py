@@ -122,8 +122,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_ui()
         self._install_actions()
         self._show_page("home_audit")
-        # Non-blocking first paint: start monitoring after the window is mapped.
-        GLib.idle_add(self._start_monitoring)
         GLib.timeout_add(700, self._check_startup_compatibility)
         if not app_settings.needs_language_prompt(self._settings):
             GLib.timeout_add(2000, self._maybe_check_updates)
@@ -211,39 +209,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _refresh_current_page(self) -> None:
         key = self._current_page
-        if key == "dashboard":
-            show_toast(self._toast_overlay, i18n.t("dash_refreshing"), timeout=1)
-            return
-        if key == "machine":
-            self._refresh_machine(show_spinner=True)
-        elif key == "fleet":
-            self._refresh_fleet(show_spinner=True)
-        elif key == "processes":
-            self._refresh_processes(show_spinner=True)
-        elif key == "services":
-            self._refresh_services(show_spinner=True)
-        elif key == "cleaner":
-            self._refresh_cleaner(show_spinner=True)
-        elif key == "disk_usage":
-            self._refresh_disk_usage(show_spinner=True)
-        elif key == "packages":
-            self._refresh_packages(show_spinner=True)
-        elif key == "logs":
-            self._refresh_logs(show_spinner=True)
-        elif key == "autostart":
-            self._refresh_autostart(show_spinner=True)
-        elif key == "timers":
-            self._refresh_timers(show_spinner=True)
-        elif key == "network":
-            self._refresh_network(show_spinner=True)
-        elif key == "security":
+        if key == "security":
             self._refresh_security(show_spinner=True)
-        elif key == "tools":
-            self._refresh_tools(show_spinner=True)
-        elif key == "backup":
-            self._refresh_backup(show_spinner=True)
-        elif key == "sessions":
-            self._refresh_sessions(show_spinner=True)
 
     def _set_busy(self, busy: bool) -> None:
         self._busy_ops = max(0, self._busy_ops + (1 if busy else -1))
@@ -567,47 +534,20 @@ class MainWindow(Adw.ApplicationWindow):
         self._ensure_page(current)
         self._show_page(current)
 
-    # --- dashboard ---
-
-    def _build_dashboard(self) -> Gtk.Widget:
-        from ui.pages import dashboard as dash_page
-
-        return dash_page.build(self)
-
-    def _build_machine(self) -> Gtk.Widget:
-        from ui.pages import machine as machine_page
-
-        return machine_page.build(self)
-
     def _refresh_machine(self, *, show_spinner: bool = False) -> None:
         from ui.pages import machine as machine_page
 
         machine_page.refresh(self, show_spinner=show_spinner)
-
-    def _build_fleet(self) -> Gtk.Widget:
-        from ui.pages import fleet as fleet_page
-
-        return fleet_page.build(self)
 
     def _refresh_fleet(self, *, show_spinner: bool = False) -> None:
         from ui.pages import fleet as fleet_page
 
         fleet_page.refresh(self, show_spinner=show_spinner)
 
-    def _build_timers_page(self) -> Gtk.Widget:
-        from ui.pages import timers as timers_page
-
-        return timers_page.build(self)
-
     def _refresh_timers(self, *, show_spinner: bool = False) -> None:
         from ui.pages import timers as timers_page
 
         timers_page.refresh(self, show_spinner=show_spinner)
-
-    def _build_disk_usage_page(self) -> Gtk.Widget:
-        from ui.pages import disk_usage as disk_usage_page
-
-        return disk_usage_page.build(self)
 
     def _refresh_disk_usage(self, *, show_spinner: bool = False) -> None:
         from ui.pages import disk_usage as disk_usage_page
@@ -672,42 +612,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         dash_page.update(self, metrics)
         self._evaluate_and_toast_alerts(metrics)
-
-    # --- processes ---
-
-    def _build_processes(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        self._process_search = Gtk.SearchEntry()
-        self._process_search.set_hexpand(True)
-        set_placeholder_text(self._process_search, i18n.t("filter_processes"))
-        self._debounced_process_search = debounce(220, self._apply_process_filter)
-        self._process_search.connect("search-changed", lambda *_: self._debounced_process_search())
-        self._process_spinner = make_spinner(size=18)
-        self._process_spinner.set_visible(False)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.set_tooltip_text(i18n.t("refresh"))
-        refresh_btn.connect("clicked", lambda *_: self._refresh_processes(show_spinner=True))
-        bar.append(self._process_search)
-        bar.append(self._process_spinner)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        self._process_scrolled = Gtk.ScrolledWindow()
-        self._process_scrolled.set_vexpand(True)
-        self._process_list = Gtk.ListBox()
-        self._process_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._process_list.add_css_class("boxed-list")
-        self._process_scrolled.set_child(self._process_list)
-        clamp = Adw.Clamp(maximum_size=1000)
-        clamp.set_margin_start(12)
-        clamp.set_margin_end(12)
-        clamp.set_margin_bottom(12)
-        clamp.set_child(self._process_scrolled)
-        root.append(clamp)
-        return root
 
     def _apply_process_filter(self) -> None:
         self._process_filter = self._process_search.get_text().strip().lower()
@@ -898,51 +802,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         run_in_thread(work, done)
 
-    # --- services ---
-
-    def _build_services_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        self._service_search = Gtk.SearchEntry()
-        self._service_search.set_hexpand(True)
-        set_placeholder_text(self._service_search, i18n.t("filter_services"))
-        self._debounced_service_search = debounce(220, self._apply_service_filter)
-        self._service_search.connect("search-changed", lambda *_: self._debounced_service_search())
-        self._service_spinner = make_spinner(size=18)
-        self._service_spinner.set_visible(False)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.connect("clicked", lambda *_: self._refresh_services(show_spinner=True))
-        bar.append(self._service_search)
-        bar.append(self._service_spinner)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        chips, self._service_chip_buttons = make_filter_chips(
-            (
-                ("active", i18n.t("svc_active")),
-                ("enabled", i18n.t("svc_enabled")),
-                ("all", i18n.t("svc_all")),
-            ),
-            active_key=self._service_chip,
-            on_change=self._set_service_chip,
-        )
-        root.append(chips)
-
-        self._service_scrolled = Gtk.ScrolledWindow()
-        self._service_scrolled.set_vexpand(True)
-        self._service_list = Gtk.ListBox()
-        self._service_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._service_list.add_css_class("boxed-list")
-        self._service_scrolled.set_child(self._service_list)
-        clamp = Adw.Clamp(maximum_size=1000)
-        clamp.set_margin_start(12)
-        clamp.set_margin_end(12)
-        clamp.set_margin_bottom(12)
-        clamp.set_child(self._service_scrolled)
-        root.append(clamp)
-        return root
-
     def _set_service_chip(self, key: str) -> None:
         self._service_chip = key
         self._render_services(self._service_data_cache)
@@ -1046,49 +905,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         run_in_thread(work, done)
 
-    # --- cleaner ---
-
-    def _build_cleaner_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        root.set_margin_top(18)
-        root.set_margin_bottom(18)
-        root.set_margin_start(18)
-        root.set_margin_end(18)
-
-        controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        scan_btn = Gtk.Button(label=i18n.t("scan"))
-        scan_btn.add_css_class("suggested-action")
-        scan_btn.connect("clicked", lambda *_: self._refresh_cleaner(show_spinner=True))
-        select_all_btn = Gtk.Button(label=i18n.t("select_all"))
-        select_all_btn.connect("clicked", lambda *_: self._cleaner_select_all(True))
-        select_none_btn = Gtk.Button(label=i18n.t("select_none"))
-        select_none_btn.connect("clicked", lambda *_: self._cleaner_select_all(False))
-        clean_btn = Gtk.Button(label=i18n.t("clean_selection"))
-        clean_btn.add_css_class("destructive-action")
-        clean_btn.connect("clicked", lambda *_: self._confirm_clean())
-        self._track_privileged(clean_btn)
-        self._cleaner_spinner = make_spinner(size=18)
-        self._cleaner_spinner.set_visible(False)
-        controls.append(scan_btn)
-        controls.append(select_all_btn)
-        controls.append(select_none_btn)
-        controls.append(clean_btn)
-        controls.append(self._cleaner_spinner)
-        root.append(controls)
-
-        self._cleaner_total = Gtk.Label(label=i18n.t("reclaimable", size="—"), xalign=0)
-        self._cleaner_total.add_css_class("title-4")
-        root.append(self._cleaner_total)
-
-        self._cleaner_checks: dict[str, Gtk.CheckButton] = {}
-        self._cleaner_list = Gtk.ListBox()
-        self._cleaner_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._cleaner_list.add_css_class("boxed-list")
-        clamp = Adw.Clamp(maximum_size=900)
-        clamp.set_child(self._cleaner_list)
-        root.append(clamp)
-        return root
-
     def _cleaner_select_all(self, active: bool) -> None:
         for check in self._cleaner_checks.values():
             check.set_active(active)
@@ -1158,70 +974,6 @@ class MainWindow(Adw.ApplicationWindow):
             self._refresh_cleaner()
 
         run_in_thread(work, done)
-
-    # --- packages ---
-
-    def _build_packages_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        self._package_search = Gtk.SearchEntry()
-        self._package_search.set_hexpand(True)
-        set_placeholder_text(self._package_search, i18n.t("filter_packages"))
-        self._debounced_package_search = debounce(280, self._apply_package_filter)
-        self._package_search.connect("search-changed", lambda *_: self._debounced_package_search())
-        self._package_spinner = make_spinner(size=18)
-        self._package_spinner.set_visible(False)
-        check_btn = Gtk.Button(label=i18n.t("check_pkg_updates"))
-        check_btn.connect("clicked", lambda *_: self._check_package_updates())
-        self._track_privileged(check_btn)
-        update_btn = Gtk.Button(label=i18n.t("apply_all_updates"))
-        update_btn.add_css_class("suggested-action")
-        update_btn.connect("clicked", lambda *_: self._confirm_apply_updates())
-        self._track_privileged(update_btn)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.connect("clicked", lambda *_: self._refresh_packages(show_spinner=True))
-        bar.append(self._package_search)
-        bar.append(self._package_spinner)
-        bar.append(check_btn)
-        bar.append(update_btn)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        chips = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        chips.add_css_class("linked")
-        chips.set_margin_start(12)
-        chips.set_margin_end(12)
-        chips.set_margin_bottom(4)
-        self._package_chip_buttons: dict[str, Gtk.ToggleButton] = {}
-        for key, label in (("all", i18n.t("pkg_all")), ("apt", "APT"), ("flatpak", "Flatpak"), ("snap", "Snap")):
-            btn = Gtk.ToggleButton(label=label)
-            btn.add_css_class("filter-chip")
-            btn.set_active(key == self._package_manager)
-            btn.connect("toggled", lambda b, k=key: self._on_package_chip(k, b))
-            self._package_chip_buttons[key] = btn
-            chips.append(btn)
-        root.append(chips)
-
-        self._managers_label = Gtk.Label(label="", xalign=0)
-        self._managers_label.set_margin_start(16)
-        self._managers_label.set_margin_bottom(8)
-        self._managers_label.add_css_class("dim-label")
-        root.append(self._managers_label)
-
-        self._package_scrolled = Gtk.ScrolledWindow()
-        self._package_scrolled.set_vexpand(True)
-        self._package_list = Gtk.ListBox()
-        self._package_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._package_list.add_css_class("boxed-list")
-        self._package_scrolled.set_child(self._package_list)
-        clamp = Adw.Clamp(maximum_size=1000)
-        clamp.set_margin_start(12)
-        clamp.set_margin_end(12)
-        clamp.set_margin_bottom(12)
-        clamp.set_child(self._package_scrolled)
-        root.append(clamp)
-        return root
 
     def _on_package_chip(self, key: str, button: Gtk.ToggleButton) -> None:
         if not button.get_active():
@@ -1458,78 +1210,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         run_in_thread(work, done)
 
-    # --- logs ---
-
-    def _build_logs_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        self._logs_search = Gtk.SearchEntry()
-        self._logs_search.set_hexpand(True)
-        set_placeholder_text(self._logs_search, i18n.t("filter_logs"))
-        self._debounced_logs_search = debounce(280, self._apply_logs_filter)
-        self._logs_search.connect("search-changed", lambda *_: self._debounced_logs_search())
-        self._logs_spinner = make_spinner(size=18)
-        self._logs_spinner.set_visible(False)
-        export_btn = Gtk.Button(label=i18n.t("export"))
-        export_btn.connect("clicked", lambda *_: self._export_logs())
-        sys_btn = Gtk.Button(label=i18n.t("journal_system_admin"))
-        sys_btn.connect(
-            "clicked",
-            lambda *_: self._refresh_logs(show_spinner=True, privileged=True),
-        )
-        self._track_privileged(sys_btn)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.set_tooltip_text(i18n.t("refresh"))
-        refresh_btn.connect("clicked", lambda *_: self._refresh_logs(show_spinner=True))
-        bar.append(self._logs_search)
-        bar.append(self._logs_spinner)
-        bar.append(export_btn)
-        bar.append(sys_btn)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        chips = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        chips.add_css_class("linked")
-        chips.set_margin_start(12)
-        chips.set_margin_end(12)
-        chips.set_margin_bottom(4)
-        self._logs_chip_buttons: dict[str, Gtk.ToggleButton] = {}
-        for key, label in (
-            ("err", "Erreurs"),
-            ("warning", "Warnings"),
-            ("info", "Info"),
-            ("all", "Tous"),
-        ):
-            btn = Gtk.ToggleButton(label=label)
-            btn.add_css_class("filter-chip")
-            btn.set_active(key == self._logs_priority)
-            btn.connect("toggled", lambda b, k=key: self._on_logs_chip(k, b))
-            self._logs_chip_buttons[key] = btn
-            chips.append(btn)
-        root.append(chips)
-
-        self._logs_status = Gtk.Label(label="—", xalign=0)
-        self._logs_status.add_css_class("dim-label")
-        self._logs_status.set_margin_start(16)
-        self._logs_status.set_margin_bottom(8)
-        root.append(self._logs_status)
-
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_vexpand(True)
-        scrolled.set_margin_start(12)
-        scrolled.set_margin_end(12)
-        scrolled.set_margin_bottom(12)
-        self._logs_view = Gtk.TextView()
-        self._logs_view.set_editable(False)
-        self._logs_view.set_cursor_visible(False)
-        self._logs_view.set_wrap_mode(Gtk.WrapMode.CHAR)
-        self._logs_view.set_monospace(True)
-        self._logs_view.add_css_class("logs-view")
-        scrolled.set_child(self._logs_view)
-        root.append(scrolled)
-        return root
-
     def _on_logs_chip(self, key: str, button: Gtk.ToggleButton) -> None:
         if not button.get_active():
             if self._logs_priority == key:
@@ -1609,38 +1289,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         run_in_thread(work, done)
 
-    # --- autostart ---
-
-    def _build_autostart_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        title = Gtk.Label(label=i18n.t("autostart_title"), xalign=0)
-        title.add_css_class("heading")
-        title.set_hexpand(True)
-        self._autostart_spinner = make_spinner(size=18)
-        self._autostart_spinner.set_visible(False)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.connect("clicked", lambda *_: self._refresh_autostart(show_spinner=True))
-        bar.append(title)
-        bar.append(self._autostart_spinner)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        self._autostart_scrolled = Gtk.ScrolledWindow()
-        self._autostart_scrolled.set_vexpand(True)
-        self._autostart_list = Gtk.ListBox()
-        self._autostart_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._autostart_list.add_css_class("boxed-list")
-        self._autostart_scrolled.set_child(self._autostart_list)
-        clamp = Adw.Clamp(maximum_size=1000)
-        clamp.set_margin_start(12)
-        clamp.set_margin_end(12)
-        clamp.set_margin_bottom(12)
-        clamp.set_child(self._autostart_scrolled)
-        root.append(clamp)
-        return root
-
     def _refresh_autostart(self, *, show_spinner: bool = False) -> None:
         if show_spinner:
             self._autostart_spinner.set_visible(True)
@@ -1707,123 +1355,6 @@ class MainWindow(Adw.ApplicationWindow):
             )
 
         run_in_thread(work, done)
-
-    # --- network ---
-
-    def _build_network_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        title = Gtk.Label(label=i18n.t("network"), xalign=0)
-        title.add_css_class("heading")
-        title.set_hexpand(True)
-        self._network_spinner = make_spinner(size=18)
-        self._network_spinner.set_visible(False)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.connect("clicked", lambda *_: self._refresh_network(show_spinner=True))
-        allow_btn = Gtk.Button(label=i18n.t("conn_allowlist_add"))
-        allow_btn.connect("clicked", lambda *_: self._open_allowlist_dialog())
-        bar.append(title)
-        bar.append(self._network_spinner)
-        bar.append(allow_btn)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        chips, self._network_chip_buttons = make_filter_chips(
-            (
-                ("wifi", i18n.t("wifi_chip")),
-                ("conn", i18n.t("conn_chip")),
-            ),
-            active_key=self._network_chip,
-            on_change=self._set_network_chip,
-        )
-        root.append(chips)
-
-        self._network_stack = Gtk.Stack()
-        self._network_stack.set_vexpand(True)
-        self._network_stack.set_hexpand(True)
-
-        wifi_scrolled = Gtk.ScrolledWindow()
-        wifi_scrolled.set_vexpand(True)
-        wifi_clamp = Adw.Clamp(maximum_size=900)
-        wifi_clamp.set_margin_start(12)
-        wifi_clamp.set_margin_end(12)
-        wifi_clamp.set_margin_bottom(12)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-
-        wifi_group = Adw.PreferencesGroup()
-        wifi_group.set_title("Wi-Fi")
-        self._wifi_switch_row = make_switch_row()
-        self._wifi_switch_row.set_title(i18n.t("wifi_radio"))
-        self._wifi_switch_row.set_subtitle("—")
-        self._wifi_switch_row.connect("notify::active", self._on_wifi_switch)
-        self._wifi_switch_guard = False
-        wifi_group.add(self._wifi_switch_row)
-        box.append(wifi_group)
-
-        self._wifi_list = Gtk.ListBox()
-        self._wifi_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._wifi_list.add_css_class("boxed-list")
-        box.append(self._section(i18n.t("networks_found"), self._wifi_list))
-
-        bt_group = Adw.PreferencesGroup()
-        bt_group.set_title("Bluetooth")
-        self._bt_switch_row = make_switch_row()
-        self._bt_switch_row.set_title(i18n.t("bt_power"))
-        self._bt_switch_row.set_subtitle("—")
-        self._bt_switch_row.connect("notify::active", self._on_bt_switch)
-        self._bt_switch_guard = False
-        bt_group.add(self._bt_switch_row)
-        box.append(bt_group)
-
-        self._bt_list = Gtk.ListBox()
-        self._bt_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._bt_list.add_css_class("boxed-list")
-        box.append(self._section(i18n.t("devices"), self._bt_list))
-
-        wifi_clamp.set_child(box)
-        wifi_scrolled.set_child(wifi_clamp)
-
-        conn_root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        conn_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        conn_bar.set_margin_start(12)
-        conn_bar.set_margin_end(12)
-        conn_bar.set_margin_bottom(8)
-        self._conn_status = Gtk.Label(label="—", xalign=0)
-        self._conn_status.set_hexpand(True)
-        self._conn_status.set_wrap(True)
-        self._conn_status.add_css_class("dim-label")
-        export_btn = Gtk.Button(label=i18n.t("conn_export"))
-        export_btn.connect("clicked", lambda *_: self._export_connections())
-        admin_btn = Gtk.Button(label=i18n.t("conn_load_admin"))
-        admin_btn.connect(
-            "clicked",
-            lambda *_: self._refresh_connections(show_spinner=True, privileged=True),
-        )
-        self._track_privileged(admin_btn)
-        conn_bar.append(self._conn_status)
-        conn_bar.append(export_btn)
-        conn_bar.append(admin_btn)
-        conn_root.append(conn_bar)
-
-        conn_scrolled = Gtk.ScrolledWindow()
-        conn_scrolled.set_vexpand(True)
-        conn_clamp = Adw.Clamp(maximum_size=900)
-        conn_clamp.set_margin_start(12)
-        conn_clamp.set_margin_end(12)
-        conn_clamp.set_margin_bottom(12)
-        self._conn_list = Gtk.ListBox()
-        self._conn_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._conn_list.add_css_class("boxed-list")
-        conn_clamp.set_child(self._conn_list)
-        conn_scrolled.set_child(conn_clamp)
-        conn_root.append(conn_scrolled)
-
-        self._network_stack.add_named(wifi_scrolled, "wifi")
-        self._network_stack.add_named(conn_root, "conn")
-        self._network_stack.set_visible_child_name(self._network_chip)
-        root.append(self._network_stack)
-        return root
 
     def _set_network_chip(self, key: str) -> None:
         self._network_chip = key
@@ -2429,67 +1960,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         run_in_thread(work, done)
 
-    # --- tools ---
-
-    def _build_tools_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        bar.add_css_class("page-toolbar")
-        title = Gtk.Label(label=i18n.t("tools_title"), xalign=0)
-        title.add_css_class("heading")
-        title.set_hexpand(True)
-        self._tools_spinner = make_spinner(size=18)
-        self._tools_spinner.set_visible(False)
-        refresh_btn = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
-        refresh_btn.connect("clicked", lambda *_: self._refresh_tools(show_spinner=True))
-        bar.append(title)
-        bar.append(self._tools_spinner)
-        bar.append(refresh_btn)
-        root.append(bar)
-
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_vexpand(True)
-        clamp = Adw.Clamp(maximum_size=900)
-        clamp.set_margin_start(12)
-        clamp.set_margin_end(12)
-        clamp.set_margin_bottom(12)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-
-        report_group = Adw.PreferencesGroup()
-        report_group.set_title(i18n.t("html_report"))
-        export_row = Adw.ActionRow()
-        export_row.set_title(i18n.t("export_health"))
-        export_row.set_subtitle(i18n.t("html_report_sub"))
-        export_btn = Gtk.Button(label=i18n.t("export"))
-        export_btn.add_css_class("suggested-action")
-        export_btn.set_valign(Gtk.Align.CENTER)
-        export_btn.connect("clicked", lambda *_: self._export_html_report())
-        export_row.add_suffix(export_btn)
-        report_group.add(export_row)
-        box.append(report_group)
-
-        plugins_group = Adw.PreferencesGroup()
-        plugins_group.set_title(i18n.t("plugins"))
-        ensure_row = Adw.ActionRow()
-        ensure_row.set_title(i18n.t("create_plugin_example"))
-        ensure_row.set_subtitle(str(plugins.plugins_dir()))
-        ensure_btn = Gtk.Button(label=i18n.t("create_sample"))
-        ensure_btn.set_valign(Gtk.Align.CENTER)
-        ensure_btn.connect("clicked", lambda *_: self._ensure_example_plugin())
-        ensure_row.add_suffix(ensure_btn)
-        plugins_group.add(ensure_row)
-        box.append(plugins_group)
-
-        self._plugins_list = Gtk.ListBox()
-        self._plugins_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._plugins_list.add_css_class("boxed-list")
-        box.append(self._section(i18n.t("plugins_scripts"), self._plugins_list))
-
-        clamp.set_child(box)
-        scrolled.set_child(clamp)
-        root.append(scrolled)
-        return root
-
     def _export_html_report(self) -> None:
         self._set_busy(True)
         show_toast(self._toast_overlay, "Génération du rapport…", timeout=2)
@@ -2570,83 +2040,10 @@ class MainWindow(Adw.ApplicationWindow):
 
         run_in_thread(work, done)
 
-    # --- backup / timeshift ---
-
-    def _build_sessions_page(self) -> Gtk.Widget:
-        from ui.pages import sessions as sessions_page
-
-        return sessions_page.build(self)
-
     def _refresh_sessions(self, *, show_spinner: bool = False) -> None:
         from ui.pages import sessions as sessions_page
 
         sessions_page.refresh(self, show_spinner=show_spinner)
-
-    def _build_backup_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self._backup_stack = Gtk.Stack()
-        self._backup_stack.set_vexpand(True)
-
-        self._backup_status_page = Adw.StatusPage()
-        self._backup_status_page.set_icon_name("drive-harddisk-symbolic")
-        self._backup_status_page.set_title(i18n.t("snapshots"))
-        self._backup_status_page.set_description("Vérification…")
-        status_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        status_box.set_halign(Gtk.Align.CENTER)
-        refresh_missing = Gtk.Button(label="Actualiser")
-        refresh_missing.connect("clicked", lambda *_: self._refresh_backup(show_spinner=True))
-        status_box.append(refresh_missing)
-        self._backup_status_page.set_child(status_box)
-        self._backup_stack.add_named(self._backup_status_page, "status")
-
-        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        content.set_margin_top(18)
-        content.set_margin_bottom(18)
-        content.set_margin_start(18)
-        content.set_margin_end(18)
-
-        self._backup_status = Gtk.Label(label=f"{i18n.t('snapshots')}: —", xalign=0)
-        self._backup_status.add_css_class("title-4")
-        content.append(self._backup_status)
-
-        controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        refresh_btn = Gtk.Button(label=i18n.t("refresh"))
-        refresh_btn.connect("clicked", lambda *_: self._refresh_backup(show_spinner=True))
-        load_btn = Gtk.Button(label=i18n.t("load_snapshots_admin"))
-        load_btn.connect(
-            "clicked",
-            lambda *_: self._refresh_backup(show_spinner=True, privileged=True),
-        )
-        create_btn = Gtk.Button(label=i18n.t("create_snapshot"))
-        create_btn.add_css_class("suggested-action")
-        create_btn.connect("clicked", lambda *_: self._confirm_snapshot())
-        self._track_privileged(load_btn)
-        self._track_privileged(create_btn)
-        self._backup_spinner = make_spinner(size=18)
-        self._backup_spinner.set_visible(False)
-        self._btrfs_assistant_btn = Gtk.Button(label=i18n.t("open_btrfs_assistant"))
-        self._btrfs_assistant_btn.set_visible(False)
-        self._btrfs_assistant_btn.connect(
-            "clicked",
-            lambda *_: self._open_btrfs_assistant(),
-        )
-        controls.append(refresh_btn)
-        controls.append(load_btn)
-        controls.append(create_btn)
-        controls.append(self._btrfs_assistant_btn)
-        controls.append(self._backup_spinner)
-        content.append(controls)
-
-        self._snapshot_list = Gtk.ListBox()
-        self._snapshot_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self._snapshot_list.add_css_class("boxed-list")
-        clamp = Adw.Clamp(maximum_size=900)
-        clamp.set_child(self._snapshot_list)
-        content.append(clamp)
-        self._backup_stack.add_named(content, "content")
-
-        root.append(self._backup_stack)
-        return root
 
     def _refresh_backup(self, *, show_spinner: bool = False, privileged: bool = False) -> None:
         if show_spinner:
