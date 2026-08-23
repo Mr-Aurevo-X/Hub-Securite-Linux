@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from core import health, settings as app_settings
+from ui.pages import PAGE_KEYS
 
 
 def _metrics(*, cpu: float = 10, ram: float = 20, disk: float = 30, temp: float = 40) -> dict:
@@ -31,7 +32,8 @@ def test_health_cpu_and_ram_penalties() -> None:
     keys = {item["key"] for item in report["recommendations"]}
     assert keys == {"cpu", "ram"}
     pages = {item["page"] for item in report["recommendations"]}
-    assert pages == {"processes"}
+    assert pages == {"home_audit"}
+    assert pages <= set(PAGE_KEYS)
 
 
 def test_health_missing_temp_and_disk_is_ok() -> None:
@@ -44,3 +46,15 @@ def test_health_missing_temp_and_disk_is_ok() -> None:
     report = health.evaluate(metrics, app_settings.DEFAULTS)
     assert report["score"] == 100
     assert report["grade"] == "A"
+
+
+def test_health_reco_pages_are_hub_pages() -> None:
+    metrics = _metrics(cpu=95, ram=91, disk=95, temp=99)
+    metrics["system"]["battery"] = {"percent": 5.0, "plugged": False}
+    report = health.evaluate(metrics, app_settings.DEFAULTS)
+    rec_pages = {item["page"] for item in report["recommendations"]}
+    assert rec_pages
+    assert rec_pages <= set(PAGE_KEYS)
+    assert "dashboard" not in rec_pages
+    assert "processes" not in rec_pages
+    assert "cleaner" not in rec_pages

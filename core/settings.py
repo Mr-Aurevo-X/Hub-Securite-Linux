@@ -10,6 +10,11 @@ from typing import Any
 from core import i18n
 from core.paths import config_dir, settings_path
 
+DEFAULT_PAGE = "home_audit"
+_PAGE_ALIASES = {
+    "dashboard": DEFAULT_PAGE,
+}
+
 DEFAULTS: dict[str, Any] = {
     "language": "fr",
     "language_chosen": False,
@@ -28,6 +33,16 @@ DEFAULTS: dict[str, Any] = {
     "alert_history": [],
     "log_filter_presets": [],
 }
+
+
+def coerce_page(value: object) -> str:
+    from ui.pages import PAGE_KEYS
+
+    key = str(value or DEFAULT_PAGE).strip().lower()
+    if not key:
+        return DEFAULT_PAGE
+    key = _PAGE_ALIASES.get(key, key)
+    return key if key in PAGE_KEYS else DEFAULT_PAGE
 
 
 def coerce_language(value: object) -> str:

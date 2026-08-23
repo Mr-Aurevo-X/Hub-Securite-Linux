@@ -86,35 +86,35 @@ def evaluate(
     items: list[dict[str, Any]] = [
         _item(
             "cpu",
-            page="processes",
+            page="home_audit",
             ok=cpu < cpu_th,
             label=f"CPU {cpu:.0f}%",
             penalty=25,
         ),
         _item(
             "ram",
-            page="processes",
+            page="home_audit",
             ok=ram < ram_th,
             label=f"RAM {ram:.0f}%",
             penalty=25,
         ),
         _item(
             "disk",
-            page="cleaner",
+            page="home_audit",
             ok=disk is None or disk < disk_th,
             label="Disque N/A" if disk is None else f"Disque {disk:.0f}%",
             penalty=20,
         ),
         _item(
             "temp",
-            page="dashboard",
+            page="home_audit",
             ok=temp is None or temp < temp_th,
             label="Temp. N/A" if temp is None else f"Temp. {temp:.0f} °C",
             penalty=20,
         ),
         _item(
             "swap",
-            page="processes",
+            page="home_audit",
             ok=swap < 50.0,
             label=f"Swap {swap:.0f}%",
             penalty=10,
@@ -124,7 +124,7 @@ def evaluate(
     items.append(
         _item(
             "load",
-            page="processes",
+            page="home_audit",
             ok=load_ok,
             label=f"Load {load1:.2f}",
             penalty=10,
@@ -136,7 +136,7 @@ def evaluate(
         items.append(
             _item(
                 "battery",
-                page="dashboard",
+                page="home_audit",
                 ok=plugged or pct >= 15.0,
                 label=f"Batterie {pct:.0f}%",
                 penalty=5,

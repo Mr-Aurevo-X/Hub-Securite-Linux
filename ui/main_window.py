@@ -91,7 +91,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._monitor_stop = threading.Event()
         self._monitor_thread: threading.Thread | None = None
-        self._current_page = "home_audit"
+        self._current_page = app_settings.coerce_page(self._settings.get("last_page") or "home_audit")
         self._process_filter = ""
         self._service_filter = ""
         self._service_chip = "active"  # active | enabled | all
@@ -121,7 +121,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._build_ui()
         self._install_actions()
-        self._show_page("home_audit")
+        self._show_page(self._current_page)
         GLib.timeout_add(700, self._check_startup_compatibility)
         if not app_settings.needs_language_prompt(self._settings):
             GLib.timeout_add(2000, self._maybe_check_updates)
@@ -171,6 +171,7 @@ class MainWindow(Adw.ApplicationWindow):
                 app.set_accels_for_action(f"win.page{idx}", [f"<Control>{idx}"])
 
     def _goto_page(self, key: str) -> None:
+        key = app_settings.coerce_page(key)
         if hasattr(self, "_nav_sidebar"):
             self._nav_sidebar.select_page(key, notify=True)
 
@@ -244,12 +245,13 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._page_builders = ui_pages.builders_for(self)
         self._built_pages: set[str] = set()
-        self._ensure_page("home_audit")
+        start = app_settings.coerce_page(self._current_page)
+        self._ensure_page(start)
 
         layout = build_main_layout(
             nav_scroll,
             self._stack,
-            page_title=page_titles().get("home_audit", i18n.t("home_audit")),
+            page_title=page_titles().get(start, i18n.t("home_audit")),
             lang=i18n.get_language(),
         )
         self._header_spinner = make_spinner(size=18)
@@ -274,13 +276,20 @@ class MainWindow(Adw.ApplicationWindow):
         )
         self._layout = layout
         self._toast_overlay.set_child(layout.widget)
-        self._nav_sidebar.select_page("home_audit", notify=False)
+        self._nav_sidebar.select_page(start, notify=False)
 
     def _ensure_page(self, key: str) -> Gtk.Widget:
+        key = app_settings.coerce_page(key)
         child = self._stack.get_child_by_name(key)
         if child is not None:
             return child
         builder = self._page_builders.get(key)
+        if builder is None:
+            key = app_settings.DEFAULT_PAGE
+            child = self._stack.get_child_by_name(key)
+            if child is not None:
+                return child
+            builder = self._page_builders.get(key)
         if builder is None:
             raise KeyError(key)
         widget = builder()
@@ -289,6 +298,7 @@ class MainWindow(Adw.ApplicationWindow):
         return widget
 
     def _show_page(self, key: str) -> None:
+        key = app_settings.coerce_page(key)
         self._current_page = key
         titles = page_titles()
         if self._layout is not None:
@@ -608,9 +618,6 @@ class MainWindow(Adw.ApplicationWindow):
         )
 
     def _update_dashboard(self, metrics: dict[str, Any]) -> None:
-        from ui.pages import dashboard as dash_page
-
-        dash_page.update(self, metrics)
         self._evaluate_and_toast_alerts(metrics)
 
     def _apply_process_filter(self) -> None:

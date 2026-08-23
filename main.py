@@ -110,7 +110,12 @@ class HubSecuriteApp(Adw.Application):
         i18n.set_language(app_settings.coerce_language(cfg.get("language")))
 
         if self._window is None:
-            self._window = MainWindow(application=self)
+            try:
+                self._window = MainWindow(application=self)
+            except Exception:
+                traceback.print_exc()
+                self.quit()
+                return
             if _HOLD_UNTIL_MAP:
                 self._window.connect("map", self._on_main_mapped)
                 self.hold()
