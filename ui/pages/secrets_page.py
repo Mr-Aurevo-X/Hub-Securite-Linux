@@ -32,6 +32,11 @@ class SecretsPage:
         go.connect("clicked", lambda *_: self._scan())
         export_btn = Gtk.Button(label=i18n.t("secrets_export"))
         export_btn.connect("clicked", lambda *_: self._export_report())
+        self._ignore_entry = Gtk.Entry()
+        self._ignore_entry.set_placeholder_text(i18n.t("secrets_ignore_motif"))
+        self._ignore_entry.set_hexpand(True)
+        ignore_btn = Gtk.Button(label=i18n.t("secrets_ignore"))
+        ignore_btn.connect("clicked", lambda *_: self._ignore_selected())
         box.append(
             common.prefs_group(
                 i18n.t("group_actions"),
@@ -39,20 +44,51 @@ class SecretsPage:
                     common.action_row(i18n.t("pick_folder"), pick),
                     common.action_row(i18n.t("secrets_scan"), go),
                     common.action_row(i18n.t("secrets_export"), export_btn),
+                    common.action_row(i18n.t("secrets_ignore_motif"), self._ignore_entry),
+                    common.action_row(i18n.t("secrets_ignore"), ignore_btn),
                 ],
             )
         )
         self._label = Gtk.Label(label="—", wrap=True, xalign=0)
         box.append(self._label)
-        self._out = Gtk.TextView()
-        self._out.set_editable(False)
-        self._out.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        box.append(common.scrolled(self._out))
+        self._list = Gtk.ListBox()
+        self._list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self._list.add_css_class("boxed-list")
+        box.append(common.scrolled(self._list))
         return common.scrolled(box)
 
     def _set_root(self, folder: Path) -> None:
         self._root = folder
         self._label.set_text(str(folder))
+
+    def _selected_hit(self) -> secretscan.Hit | None:
+        row = self._list.get_selected_row()
+        if row is None:
+            return None
+        idx = row.get_index()
+        if 0 <= idx < len(self._hits):
+            return self._hits[idx]
+        return None
+
+    def _fill_hits(self, hits: list[secretscan.Hit]) -> None:
+        common.clear_list(self._list)
+        self._hits = hits
+        if not hits:
+            row = Gtk.ListBoxRow()
+            row.set_sensitive(False)
+            row.set_child(Gtk.Label(label="—", xalign=0))
+            self._list.append(row)
+            return
+        for hit in hits:
+            row = Gtk.ListBoxRow()
+            row.set_child(
+                Gtk.Label(
+                    label=f"{hit.path}:{hit.line}: {hit.rule}: {hit.excerpt}",
+                    xalign=0,
+                    wrap=True,
+                )
+            )
+            self._list.append(row)
 
     def _scan(self) -> None:
         root = self._root
@@ -60,23 +96,37 @@ class SecretsPage:
             show_toast(self._toast, i18n.t("pick_folder"), 4)
             return
 
-        def work() -> tuple[list[secretscan.Hit], str]:
-            hits = secretscan.scan_tree(root)
-            if not hits:
-                return hits, "—"
-            text = "\n".join(f"{hit.path}:{hit.line}: {hit.rule}: {hit.excerpt}" for hit in hits)
-            return hits, text
+        def work() -> list[secretscan.Hit]:
+            ignore = secretscan.load_ignores(secretscan.ignores_path())
+            return secretscan.scan_tree(root, ignore=ignore)
 
         def done(result: Any, error: BaseException | None) -> None:
             if error is not None:
                 show_toast(self._toast, str(error), 6)
                 return
-            hits, text = result
-            self._hits = hits
-            self._out.get_buffer().set_text(str(text))
+            self._fill_hits(list(result or []))
             show_toast(self._toast, "OK")
 
         run_in_thread(work, done)
+
+    def _ignore_selected(self) -> None:
+        motif = (self._ignore_entry.get_text() or "").strip()
+        hit = self._selected_hit()
+        if not motif and hit is None:
+            show_toast(self._toast, i18n.t("secrets_ignore_empty"), 4)
+            return
+        rules = secretscan.load_ignores(secretscan.ignores_path())
+        if motif:
+            rules.add(motif)
+        if hit is not None:
+            rules.add(hit.rule)
+            if hit.excerpt:
+                rules.add(hit.excerpt)
+        secretscan.save_ignores(secretscan.ignores_path(), rules)
+        self._ignore_entry.set_text("")
+        show_toast(self._toast, i18n.t("secrets_ignored"))
+        if self._root is not None:
+            self._scan()
 
     def _export_report(self) -> None:
         if not self._hits:
