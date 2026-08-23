@@ -38,6 +38,8 @@ modules:
         ${FLATPAK_DEST}/share/applications/org.mraurevox.HubSecurite.desktop
       - install -Dm644 packaging/flatpak/org.mraurevox.HubSecurite.metainfo.xml
         ${FLATPAK_DEST}/share/metainfo/org.mraurevox.HubSecurite.metainfo.xml
+      - install -Dm644 packaging/flatpak/org.mraurevox.HubSecurite.svg
+        ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/org.mraurevox.HubSecurite.svg
       - install -Dm644 packaging/flatpak/org.mraurevox.HubSecurite.png
         ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/org.mraurevox.HubSecurite.png
     sources:
