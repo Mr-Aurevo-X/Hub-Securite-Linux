@@ -41,6 +41,11 @@
   </provides>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.1.0" date="2026-08-23">
+      <description>
+        <p>Audit sécurité autonome : bouton Scanner, barre de progression par phases, rapport HTML autonome.</p>
+      </description>
+    </release>
     <release version="2.5.1" date="2026-08-23">
       <description>
         <p>Correctif : plus de boucle pkexec Snapper sur le tableau de bord (rappel clichés sans admin).</p>

@@ -64,6 +64,7 @@ from ui.components import (
     show_toast,
 )
 from ui.page_helpers import make_filter_chips
+from ui.pages.audit_page import AuditPage
 from ui.nav import NavSidebar, page_titles
 from ui.search import present as present_search
 from ui_kit.shell import ShellLayout, build_main_layout
@@ -210,6 +211,11 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _refresh_current_page(self) -> None:
         key = self._current_page
+        if key == "home_audit":
+            page = getattr(self, "_audit_page", None)
+            if page is not None:
+                page.start_scan()
+            return
         if key == "security":
             self._refresh_security(show_spinner=True)
 
@@ -2397,59 +2403,9 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.present(self)
 
     def _build_home_audit_page(self) -> Gtk.Widget:
-        from core import audit
-
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_top(24)
-        box.set_margin_start(24)
-        box.set_margin_end(24)
-        title = Gtk.Label(label=i18n.t("hub_audit_title"), xalign=0)
-        title.add_css_class("title-1")
-        data = audit.evaluate()
-        score = int(data.get("score") or 0)
-        score_lbl = Gtk.Label(label=i18n.t("audit_score", score=score), xalign=0)
-        score_lbl.add_css_class("title-2")
-        box.append(title)
-        box.append(score_lbl)
-        groups = data.get("groups") or {}
-        for key, heading in (
-            ("warn", "audit_section_warn"),
-            ("info", "audit_section_info"),
-            ("ok", "audit_section_ok"),
-        ):
-            items = groups.get(key) or []
-            if not items:
-                continue
-            section = Gtk.Label(label=i18n.t(heading), xalign=0)
-            section.add_css_class("heading")
-            box.append(section)
-            listbox = Gtk.ListBox()
-            listbox.add_css_class("boxed-list")
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                row = Adw.ActionRow()
-                row.set_title(str(item.get("label") or ""))
-                row.set_subtitle(str(item.get("id") or ""))
-                listbox.append(row)
-            box.append(listbox)
-        reco_title = Gtk.Label(label=i18n.t("audit_section_reco"), xalign=0)
-        reco_title.add_css_class("heading")
-        box.append(reco_title)
-        reco_box = Gtk.ListBox()
-        reco_box.add_css_class("boxed-list")
-        for line in data.get("recommendations") or []:
-            row = Adw.ActionRow()
-            row.set_title(str(line))
-            reco_box.append(row)
-        box.append(reco_box)
-        actions = Gtk.Box(spacing=8)
-        for key, label_key in (("security", "security"), ("secrets", "secrets"), ("permissions", "permissions")):
-            btn = Gtk.Button(label=i18n.t(label_key))
-            btn.connect("clicked", lambda *_a, k=key: self._show_page(k))
-            actions.append(btn)
-        box.append(actions)
-        return box
+        page = AuditPage(self, self._toast_overlay)
+        self._audit_page = page
+        return page.widget
 
     def _build_secrets_page(self) -> Gtk.Widget:
         from ui.pages.secrets_page import SecretsPage
