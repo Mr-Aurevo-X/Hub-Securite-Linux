@@ -7,7 +7,7 @@
 
 ## Français
 
-Audit, secrets, permissions. Repo Linux dédié.
+Audit+, durcissement, FileGuard, certificats, RepoRadar, secrets, permissions. Repo Linux dédié.
 
 - **GitHub** : `Mr-Aurevo-X/Hub-Securite-Linux` (privé)
 - **Plateforme** : voir [linux-platform](https://github.com/Mr-Aurevo-X/linux-platform)
@@ -34,7 +34,7 @@ Local-first, pas de télémétrie. Vérif. GitHub au démarrage (désactivable).
 
 ## English
 
-Audit, secrets, file permissions. Dedicated Linux repo.
+Audit+, hardening, FileGuard, certificates, RepoRadar, secrets, permissions. Dedicated Linux repo.
 
 - **GitHub**: `Mr-Aurevo-X/Hub-Securite-Linux` (private)
 - **Platform**: see [linux-platform](https://github.com/Mr-Aurevo-X/linux-platform)

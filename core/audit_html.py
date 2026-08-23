@@ -45,6 +45,25 @@ def build_report_html(report: dict[str, Any] | None = None) -> str:
         f"<li>{html.escape(str(line))}</li>" for line in (data.get("recommendations") or []) if str(line)
     ) or f"<li>{html.escape(i18n.t('audit_reco_none'))}</li>"
 
+    diff = data.get("diff") if isinstance(data.get("diff"), dict) else {}
+    new_items = [item for item in (diff.get("new") or []) if isinstance(item, dict)]
+    resolved_items = [item for item in (diff.get("resolved") or []) if isinstance(item, dict)]
+    new_lis = "".join(
+        f"<li class='warn'>{html.escape(str(item.get('label') or item.get('id') or ''))}</li>"
+        for item in new_items
+    ) or "<li>—</li>"
+    resolved_lis = "".join(
+        f"<li>{html.escape(str(item.get('label') or item.get('id') or ''))}</li>"
+        for item in resolved_items
+    ) or "<li>—</li>"
+    diff_summary = html.escape(str(diff.get("summary") or i18n.t("audit_diff_first")))
+    diff_section = (
+        f"<h2>{html.escape(i18n.t('audit_diff_title'))}</h2>"
+        f"<p>{diff_summary}</p>"
+        f"<h3>{html.escape(i18n.t('audit_diff_new'))}</h3><ul>{new_lis}</ul>"
+        f"<h3>{html.escape(i18n.t('audit_diff_resolved'))}</h3><ul>{resolved_lis}</ul>"
+    )
+
     return f"""<!DOCTYPE html>
 <html lang="{lang}"><head><meta charset="utf-8"/>
 <title>{title}</title>
@@ -64,6 +83,7 @@ th{{background:#2a2a2a}}
 <p class="score">{score}/100</p>
 <h2>{html.escape(i18n.t('audit_section_reco'))}</h2>
 <ul>{recos}</ul>
+{diff_section}
 <h2>{html.escape(i18n.t('hub_audit_title'))}</h2>
 <table>
 <tr><th>phase</th><th>id</th><th>severity</th><th>label</th></tr>

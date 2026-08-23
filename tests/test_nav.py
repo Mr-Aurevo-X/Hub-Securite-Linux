@@ -20,6 +20,10 @@ def test_flat_nav_unique_keys() -> None:
 def test_group_for_known_pages() -> None:
     assert group_for_page("home_audit") == "home"
     assert group_for_page("security") == "security"
+    assert group_for_page("hardening") == "security"
+    assert group_for_page("fileguard") == "security"
+    assert group_for_page("certs") == "security"
+    assert group_for_page("reporadar") == "security"
     assert group_for_page("secrets") == "security"
     assert group_for_page("permissions") == "security"
 
@@ -27,4 +31,5 @@ def test_group_for_known_pages() -> None:
 def test_flat_nav_starts_with_audit() -> None:
     keys = [item[0] for item in flat_nav_items()]
     assert keys[0] == "home_audit"
+    assert keys[1:6] == ["security", "hardening", "fileguard", "certs", "reporadar"]
     assert "permissions" in keys

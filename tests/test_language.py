@@ -58,8 +58,13 @@ def test_nav_includes_audit_and_secrets() -> None:
         assert "security" in keys
         assert "secrets" in keys
         assert "permissions" in keys
+        assert "hardening" in keys
+        assert "fileguard" in keys
+        assert "certs" in keys
+        assert "reporadar" in keys
         i18n.set_language("en")
         assert i18n.t("secrets") == "Secrets"
+        assert i18n.t("hardening") == "Hardening"
     finally:
         i18n.set_language(previous)
 

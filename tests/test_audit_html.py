@@ -23,6 +23,12 @@ def _report() -> dict:
         ],
         "recommendations": ["Turn on firewall"],
         "groups": {"warn": [], "ok": [], "info": []},
+        "diff": {
+            "has_previous": True,
+            "summary": "Depuis le dernier scan : 1 nouveau(x), 0 résolu(s)",
+            "new": [{"id": "firewall", "label": "Pare-feu inactif"}],
+            "resolved": [],
+        },
     }
 
 
@@ -35,6 +41,7 @@ def test_html_escapes_labels_and_is_standalone() -> None:
     assert "https://" not in html
     assert "<style>" in html
     assert "src=" not in html.lower()
+    assert "Depuis le dernier scan" in html or "Since last scan" in html
 
 
 def test_export_html_writes_file(tmp_path: Path) -> None:

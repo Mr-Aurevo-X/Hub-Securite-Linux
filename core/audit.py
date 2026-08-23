@@ -24,6 +24,7 @@ PHASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("persistence", ("_autostart_check",)),
     ("runtime", ("_sshd_listen_check", "_suid_check", "_cron_check")),
     ("network", ("_firewall_check", "_listening_check", "_unknown_peers_check")),
+    ("devices", ("_devices_check",)),
     ("accounts", ("_users_check",)),
     ("traces", ("_fail2ban_check", "_auth_check")),
     (
@@ -418,6 +419,140 @@ def _sshd_config_value(text: str, key: str) -> str | None:
     return found
 
 
+_ACTION_FOR_WARN = {
+    "firewall": "firewall_enable",
+    "world_writable": "chmod_home",
+    "permissions": "chmod_ssh",
+}
+
+_PAGE_FOR_ID = {
+    "firewall": "security",
+    "world_writable": "hardening",
+    "permissions": "permissions",
+    "secrets": "secrets",
+    "unknown_peers": "security",
+}
+
+
+def annotate_check(row: dict[str, Any]) -> dict[str, Any]:
+    if str(row.get("severity") or "") != "warn":
+        return row
+    cid = str(row.get("id") or "")
+    action = _ACTION_FOR_WARN.get(cid)
+    page = _PAGE_FOR_ID.get(cid)
+    if action:
+        row["action"] = action
+    if page:
+        row["page"] = page
+    return row
+
+
+def collect_actions(checks: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in checks or []:
+        if not isinstance(item, dict) or str(item.get("severity") or "") != "warn":
+            continue
+        action = str(item.get("action") or "")
+        page = str(item.get("page") or "")
+        if not action and not page:
+            continue
+        out.append(
+            {
+                "id": action,
+                "check_id": str(item.get("id") or ""),
+                "label": str(item.get("label") or ""),
+                "actionable": bool(action),
+                "page": page,
+            }
+        )
+    return out
+
+
+def _devices_check() -> tuple[Check, int]:
+    warned = 0
+    seen = 0
+    for root in (Path("/media"), Path("/run/media")):
+        if not root.is_dir():
+            continue
+        try:
+            children = list(root.iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if not child.is_dir():
+                continue
+            seen += 1
+            try:
+                mode = child.stat().st_mode & 0o777
+            except OSError:
+                continue
+            if mode & 0o002:
+                warned += 1
+    if warned:
+        return (
+            {"id": "devices", "label": i18n.t("audit_devices_warn", count=warned), "severity": "warn"},
+            min(12, 4 + warned * 2),
+        )
+    if seen:
+        return {"id": "devices", "label": i18n.t("audit_devices_ok", count=seen), "severity": "ok"}, 0
+    return {"id": "devices", "label": i18n.t("audit_devices_none"), "severity": "info"}, 0
+
+
+def diff_reports(previous: dict[str, Any] | None, current: dict[str, Any]) -> dict[str, Any]:
+    prev_checks = [item for item in (previous or {}).get("checks") or [] if isinstance(item, dict)]
+    curr_checks = [item for item in (current.get("checks") or []) if isinstance(item, dict)]
+    if previous is None:
+        return {
+            "has_previous": False,
+            "new": [],
+            "resolved": [],
+            "summary": i18n.t("audit_diff_first"),
+        }
+    prev_by_id = {str(item.get("id") or ""): item for item in prev_checks}
+    curr_by_id = {str(item.get("id") or ""): item for item in curr_checks}
+    new: list[dict[str, Any]] = []
+    resolved: list[dict[str, Any]] = []
+    for cid, item in curr_by_id.items():
+        old = prev_by_id.get(cid)
+        if old is None:
+            new.append(item)
+            continue
+        if old.get("severity") != "warn" and item.get("severity") == "warn":
+            new.append(item)
+        elif old.get("severity") == "warn" and item.get("severity") != "warn":
+            resolved.append(item)
+    for cid, old in prev_by_id.items():
+        if cid and cid not in curr_by_id:
+            resolved.append(old)
+    return {
+        "has_previous": True,
+        "new": new,
+        "resolved": resolved,
+        "summary": i18n.t("audit_diff_summary", new=len(new), resolved=len(resolved)),
+    }
+
+
+def filter_checks(
+    checks: list[dict[str, Any]] | None,
+    *,
+    severity: str = "",
+    query: str = "",
+) -> list[dict[str, Any]]:
+    rows = [item for item in (checks or []) if isinstance(item, dict)]
+    sev = (severity or "").strip().lower()
+    if sev and sev not in {"", "all"}:
+        rows = [item for item in rows if str(item.get("severity") or "") == sev]
+    needle = (query or "").strip().lower()
+    if needle:
+        rows = [
+            item
+            for item in rows
+            if needle
+            in f"{item.get('id', '')} {item.get('label', '')} {item.get('phase', '')}".lower()
+        ]
+    return rows
+
+
 def _sshd_config_check() -> tuple[Check, int]:
     path = Path("/etc/ssh/sshd_config")
     if not path.is_file():
@@ -476,6 +611,7 @@ def run_scan(
     persist: bool = False,
 ) -> dict[str, Any]:
     _raise_if_cancelled(cancel)
+    previous = load_last_result()
     started = time.monotonic()
     checks: list[Check] = []
     score = 100
@@ -503,7 +639,7 @@ def run_scan(
                     "severity": "info",
                 }
                 penalty = 0
-            row = dict(item)
+            row = annotate_check(dict(item))
             row["phase"] = phase
             checks.append(row)
             score -= int(penalty)
@@ -535,10 +671,12 @@ def run_scan(
         "checks": checks,
         "groups": groups,
         "recommendations": recommendations,
+        "actions": collect_actions(checks),
         "duration_sec": round(time.monotonic() - started, 1),
         "hostname": hostname,
         "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
+    report["diff"] = diff_reports(previous, report)
     if persist:
         save_last_result(report)
     return report

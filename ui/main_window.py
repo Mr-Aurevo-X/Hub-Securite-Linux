@@ -313,6 +313,11 @@ class MainWindow(Adw.ApplicationWindow):
             self._nav_sidebar.select_page(key, notify=False)
         self._ensure_page(key)
         self._stack.set_visible_child_name(key)
+        if key == "hardening":
+            page = getattr(self, "_hardening_page", None)
+            reload = getattr(page, "reload", None)
+            if callable(reload):
+                reload()
         if key == "machine":
             self._refresh_machine()
         elif key == "fleet":
@@ -2405,6 +2410,31 @@ class MainWindow(Adw.ApplicationWindow):
     def _build_home_audit_page(self) -> Gtk.Widget:
         page = AuditPage(self, self._toast_overlay)
         self._audit_page = page
+        return page.widget
+
+    def _build_hardening_page(self) -> Gtk.Widget:
+        from ui.pages.hardening_page import HardeningPage
+
+        page = HardeningPage(self, self._toast_overlay)
+        self._hardening_page = page
+        return page.widget
+
+    def _build_fileguard_page(self) -> Gtk.Widget:
+        from ui.pages.fileguard_page import FileGuardPage
+
+        page = FileGuardPage(self, self._toast_overlay)
+        return page.widget
+
+    def _build_certs_page(self) -> Gtk.Widget:
+        from ui.pages.certs_page import CertsPage
+
+        page = CertsPage(self, self._toast_overlay)
+        return page.widget
+
+    def _build_reporadar_page(self) -> Gtk.Widget:
+        from ui.pages.reporadar_page import RepoRadarPage
+
+        page = RepoRadarPage(self, self._toast_overlay)
         return page.widget
 
     def _build_secrets_page(self) -> Gtk.Widget:

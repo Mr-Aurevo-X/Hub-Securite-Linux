@@ -53,6 +53,25 @@ class AuditPage:
         toolbar.append(self._scan_btn)
         toolbar.append(self._cancel_btn)
         toolbar.append(self._export_btn)
+        self._sev = compat.string_choice(
+            [
+                i18n.t("audit_filter_all"),
+                i18n.t("audit_filter_warn"),
+                i18n.t("audit_filter_info"),
+                i18n.t("audit_filter_ok"),
+            ]
+        )
+        self._sev_ids = ("", "warn", "info", "ok")
+        if hasattr(self._sev, "get_selected"):
+            self._sev.connect("notify::selected", lambda *_: self._render_results())
+        else:
+            self._sev.connect("changed", lambda *_: self._render_results())
+        toolbar.append(self._sev)
+        self._search = Gtk.SearchEntry()
+        self._search.set_placeholder_text(i18n.t("audit_filter_search"))
+        self._search.set_hexpand(True)
+        self._search.connect("search-changed", lambda *_: self._render_results())
+        toolbar.append(self._search)
         root.append(toolbar)
 
         progress_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -90,7 +109,7 @@ class AuditPage:
         body.append(self._results)
 
         actions = Gtk.Box(spacing=8)
-        for key in ("security", "secrets", "permissions"):
+        for key in ("security", "hardening", "fileguard", "certs", "reporadar", "secrets", "permissions"):
             btn = Gtk.Button(label=i18n.t(key))
             btn.connect("clicked", lambda *_a, k=key: self._goto(k))
             actions.append(btn)
@@ -161,6 +180,29 @@ class AuditPage:
             self._results.remove(child)
             child = nxt
 
+    def _severity_filter(self) -> str:
+        idx = compat.choice_index(self._sev)
+        if 0 <= idx < len(self._sev_ids):
+            return self._sev_ids[idx]
+        return ""
+
+    def _append_rows(self, heading: str, items: list[Any]) -> None:
+        if not items:
+            return
+        section = Gtk.Label(label=heading, xalign=0)
+        section.add_css_class("heading")
+        self._results.append(section)
+        listbox = Gtk.ListBox()
+        listbox.add_css_class("boxed-list")
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row = Adw.ActionRow()
+            row.set_title(str(item.get("label") or item.get("id") or ""))
+            row.set_subtitle(str(item.get("phase") or item.get("id") or ""))
+            listbox.append(row)
+        self._results.append(listbox)
+
     def _apply_report(self, report: dict[str, Any]) -> None:
         self._report = report
         self._export_btn.set_sensitive(not self._busy)
@@ -171,29 +213,39 @@ class AuditPage:
         duration = report.get("duration_sec")
         extra = f" · {duration}s" if duration is not None else ""
         self._score_lbl.set_text(f"{i18n.t('audit_score', score=score)} — {grade}{extra}")
+        self._render_results()
+
+    def _render_results(self) -> None:
+        if getattr(self, "_results", None) is None:
+            return
+        report = self._report
         self._clear_results()
-        groups = report.get("groups") or {}
+        if not report:
+            return
+        diff = report.get("diff") if isinstance(report.get("diff"), dict) else {}
+        if diff:
+            diff_title = Gtk.Label(label=i18n.t("audit_diff_title"), xalign=0)
+            diff_title.add_css_class("heading")
+            self._results.append(diff_title)
+            summary = Gtk.Label(label=str(diff.get("summary") or i18n.t("audit_diff_first")), wrap=True, xalign=0)
+            summary.add_css_class("dim-label")
+            self._results.append(summary)
+            self._append_rows(i18n.t("audit_diff_new"), list(diff.get("new") or []))
+            self._append_rows(i18n.t("audit_diff_resolved"), list(diff.get("resolved") or []))
+        filtered = audit.filter_checks(
+            list(report.get("checks") or []),
+            severity=self._severity_filter(),
+            query=self._search.get_text() if self._search is not None else "",
+        )
+        groups: dict[str, list[dict[str, Any]]] = {"warn": [], "info": [], "ok": []}
+        for item in filtered:
+            groups.setdefault(str(item.get("severity") or "info"), []).append(item)
         for key, heading in (
             ("warn", "audit_section_warn"),
             ("info", "audit_section_info"),
             ("ok", "audit_section_ok"),
         ):
-            items = groups.get(key) or []
-            if not items:
-                continue
-            section = Gtk.Label(label=i18n.t(heading), xalign=0)
-            section.add_css_class("heading")
-            self._results.append(section)
-            listbox = Gtk.ListBox()
-            listbox.add_css_class("boxed-list")
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                row = Adw.ActionRow()
-                row.set_title(str(item.get("label") or ""))
-                row.set_subtitle(str(item.get("phase") or item.get("id") or ""))
-                listbox.append(row)
-            self._results.append(listbox)
+            self._append_rows(i18n.t(heading), groups.get(key) or [])
         reco_title = Gtk.Label(label=i18n.t("audit_section_reco"), xalign=0)
         reco_title.add_css_class("heading")
         self._results.append(reco_title)

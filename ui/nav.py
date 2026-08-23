@@ -38,6 +38,10 @@ def nav_groups() -> tuple[NavGroup, ...]:
             "security",
             (
                 NavPage("security", "dialog-password-symbolic"),
+                NavPage("hardening", "security-medium-symbolic"),
+                NavPage("fileguard", "changes-prevent-symbolic"),
+                NavPage("certs", "application-certificate-symbolic"),
+                NavPage("reporadar", "folder-remote-symbolic"),
                 NavPage("secrets", "folder-documents-symbolic"),
                 NavPage("permissions", "folder-lock-symbolic"),
             ),
