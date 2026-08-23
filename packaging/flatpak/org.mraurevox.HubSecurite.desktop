@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Hub Sécurité
+Comment=Gestion système Linux (santé, monitoring, paquets, clichés)
+Comment[en]=Linux system manager (monitoring, services, cleaner)
+Exec=hub-securite
+Icon=org.mraurevox.HubSecurite
+Terminal=false
+Categories=System;Monitor;
+StartupNotify=true
+StartupWMClass=org.mraurevox.HubSecurite
