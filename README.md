@@ -6,7 +6,7 @@
 > **Dépôt privé** — reste privé pour le moment. Pas de canal public / Flathub.  
 > **Private repo** — stays private for now. No public channel / Flathub.
 
-**Version : 1.3.0** — tag `v1.3.0`
+**Version : 1.3.1** — tag `v1.3.1`
 
 ---
 
@@ -24,7 +24,7 @@ Matrice : Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper
 Les URL `releases/latest/download/…` **ne marchent pas** tant que le dépôt est privé. Il faut [GitHub CLI](https://cli.github.com/) connecté au compte.
 
 ```bash
-gh release download v1.3.0 -R Mr-Aurevo-X/Hub-Securite-Linux \
+gh release download v1.3.1 -R Mr-Aurevo-X/Hub-Securite-Linux \
   -p 'org.mraurevox.HubSecurite.flatpak' \
   -p 'INSTALLER-RACCOURCI-FLATPAK.sh'
 flatpak install --user -y --reinstall ./org.mraurevox.HubSecurite.flatpak
@@ -37,6 +37,10 @@ Dev local (clone) :
 ```bash
 bash LANCER.sh
 ```
+
+### 1.3.1
+
+- Icône application : bouclier sur carré arrondi
 
 ### 1.3.0
 
@@ -66,7 +70,7 @@ Matrix: Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper).
 Anonymous `releases/latest/download/…` URLs **do not work** while the repo is private.
 
 ```bash
-gh release download v1.3.0 -R Mr-Aurevo-X/Hub-Securite-Linux \
+gh release download v1.3.1 -R Mr-Aurevo-X/Hub-Securite-Linux \
   -p 'org.mraurevox.HubSecurite.flatpak' \
   -p 'INSTALLER-RACCOURCI-FLATPAK.sh'
 flatpak install --user -y --reinstall ./org.mraurevox.HubSecurite.flatpak
