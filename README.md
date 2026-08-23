@@ -28,7 +28,7 @@ bash LANCER.sh
 
 ### Confidentialité
 
-100 % local-first. Seule connexion optionnelle : vérification de version GitHub (lecture seule). Pas de télémétrie.
+Local-first, pas de télémétrie. Vérif. GitHub au démarrage (désactivable). L'audit peut joindre les miroirs de paquets. Pas d'install auto.
 
 ---
 
@@ -41,7 +41,7 @@ Audit, secrets, file permissions. Dedicated Linux repo.
 
 ### Privacy
 
-100% local-first. Optional read-only GitHub release check. No telemetry.
+Local-first, no telemetry. Startup GitHub check (can be disabled). Audit may contact package mirrors. No auto-install.
 
 ---
 

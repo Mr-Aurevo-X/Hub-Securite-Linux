@@ -23,3 +23,8 @@ def test_legal_markdown_fr_en() -> None:
     assert "<!-- lang:" not in en
     assert "ss" in fr
     assert "ss" in en
+    assert "Gest_Linux_Pro" not in fr
+    assert "Gest_Linux_Pro" not in en
+    assert "~/.config/Mr-Aurevo-X/hubs/securite/" in fr
+    assert "Hub-Securite-Linux" in fr
+    assert "checkupdates" in fr
