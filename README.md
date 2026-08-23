@@ -3,56 +3,48 @@
 > **WIP** — encore en développement.  
 > **WIP** — still in development.
 
-> **Dépôt privé** — reste privé pour le moment. Pas de canal public / Flathub.  
-> **Private repo** — stays private for now. No public channel / Flathub.
+Audit+, durcissement, FileGuard, certificats, RepoRadar, secrets, permissions.
 
-**Version : 1.3.1** — tag `v1.3.1`
+**1.3.1** — [releases](https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases) · GPL-3.0-or-later · © 2026 Mr-Aurevo-X
+
+Matrice : Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper). Local-first, pas de sync auto des dépôts.
 
 ---
 
 ## Français
 
-Audit+, durcissement, FileGuard, certificats, RepoRadar, secrets, permissions.
+### Installer (Flatpak)
 
-Matrice : Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper). Local-first, pas de sync auto des dépôts.
-
-- **GitHub** : `Mr-Aurevo-X/Hub-Securite-Linux` (privé)
-- **Plateforme** : [linux-platform](https://github.com/Mr-Aurevo-X/linux-platform)
-
-### Install (privé — `gh` authentifié)
-
-Les URL `releases/latest/download/…` **ne marchent pas** tant que le dépôt est privé. Il faut [GitHub CLI](https://cli.github.com/) connecté au compte.
+Prérequis : [Flatpak](https://flatpak.org/setup/) + runtime GNOME 49 (installé automatiquement depuis Flathub au premier `flatpak install`).
 
 ```bash
-gh release download v1.3.1 -R Mr-Aurevo-X/Hub-Securite-Linux \
-  -p 'org.mraurevox.HubSecurite.flatpak' \
-  -p 'INSTALLER-RACCOURCI-FLATPAK.sh'
+wget -O org.mraurevox.HubSecurite.flatpak \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/org.mraurevox.HubSecurite.flatpak
 flatpak install --user -y --reinstall ./org.mraurevox.HubSecurite.flatpak
+wget -O INSTALLER-RACCOURCI-FLATPAK.sh \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/INSTALLER-RACCOURCI-FLATPAK.sh
 bash ./INSTALLER-RACCOURCI-FLATPAK.sh
 flatpak run org.mraurevox.HubSecurite
 ```
 
-Dev local (clone) :
+Dev sans installer : `bash LANCER.sh`
 
-```bash
-bash LANCER.sh
-```
+### Ce que ça fait
 
-### 1.3.1
+- Audit et durcissement local
+- FileGuard (chemins suivis)
+- Certificats, RepoRadar (pacman / apt / dnf / zypper)
+- Secrets (dossier courant, défaut `$HOME`) et permissions
 
-- Icône application : bouclier sur carré arrondi
+### Ce que ça ne fait pas
 
-### 1.3.0
-
-- Audit et RepoRadar : une API MAJ lecture seule (pacman / apt-check / dnf cache / zypper `--no-refresh`)
-- RepoRadar : `yum.repos.d` + `zypp/repos.d`, orphelins dnf/zypper, empty states honnêtes
-- FileGuard : chemins suivis visibles
-- Durcissement : 3 actions toujours sur la page + journal
-- Secrets : dossier courant affiché (défaut `$HOME`)
+Pas de télémétrie, pas d’install automatique, pas de canal Flathub.  
+L’audit peut joindre les miroirs de paquets.
 
 ### Confidentialité
 
-Local-first, pas de télémétrie. Vérif. GitHub au démarrage (désactivable) — **inutile tant que le dépôt est privé** (API publique). L'audit peut joindre les miroirs de paquets. Pas d'install auto.
+Local-first. Vérif. GitHub au démarrage (désactivable). Pas d’install auto.  
+Texte : [LEGAL.md](LEGAL.md) — dans l’app : mentions légales.
 
 ---
 
@@ -62,28 +54,33 @@ Audit+, hardening, FileGuard, certificates, RepoRadar, secrets, permissions.
 
 Matrix: Arch/Cachy (pacman), Mint/Ubuntu (apt), Fedora (dnf), openSUSE (zypper). Local-first, no auto repo sync.
 
-- **GitHub**: `Mr-Aurevo-X/Hub-Securite-Linux` (private)
-- **Platform**: [linux-platform](https://github.com/Mr-Aurevo-X/linux-platform)
-
-### Install (private — authenticated `gh`)
-
-Anonymous `releases/latest/download/…` URLs **do not work** while the repo is private.
+### Install (Flatpak)
 
 ```bash
-gh release download v1.3.1 -R Mr-Aurevo-X/Hub-Securite-Linux \
-  -p 'org.mraurevox.HubSecurite.flatpak' \
-  -p 'INSTALLER-RACCOURCI-FLATPAK.sh'
+wget -O org.mraurevox.HubSecurite.flatpak \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/org.mraurevox.HubSecurite.flatpak
 flatpak install --user -y --reinstall ./org.mraurevox.HubSecurite.flatpak
+wget -O INSTALLER-RACCOURCI-FLATPAK.sh \
+  https://github.com/Mr-Aurevo-X/Hub-Securite-Linux/releases/download/v1.3.1/INSTALLER-RACCOURCI-FLATPAK.sh
 bash ./INSTALLER-RACCOURCI-FLATPAK.sh
 flatpak run org.mraurevox.HubSecurite
 ```
 
 Local dev: `bash LANCER.sh`
 
-### Privacy
-
-Local-first, no telemetry. Startup GitHub check (can be disabled) is a no-op on a private repo without a token. Audit may contact package mirrors. No auto-install.
+No telemetry, no auto-install. Audit may contact package mirrors. See [LEGAL.md](LEGAL.md).
 
 ---
 
-Copyright © 2026 Mr-Aurevo-X
+## Soutien (optionnel) / Support (optional)
+
+Si le boulot te plaît, un café — sinon profite.  
+If you like the work, a coffee — otherwise just enjoy it.
+
+[![Discord](https://img.shields.io/badge/Discord-Mr--Aurevo--X-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=050807)](https://discord.com/users/406891052516114442)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-39ff14?style=for-the-badge&logo=paypal&logoColor=00f0ff&labelColor=050807)](https://www.paypal.com/paypalme/aurevo1)
+[![Revolut](https://img.shields.io/badge/Revolut-mr__aurevo__x-00f0ff?style=for-the-badge&logo=revolut&logoColor=39ff14&labelColor=050807)](https://revolut.me/mr_aurevo_x)
+
+---
+
+Copyright © 2026 Mr-Aurevo-X — GPL-3.0-or-later
