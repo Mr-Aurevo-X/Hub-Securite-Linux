@@ -91,7 +91,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._monitor_stop = threading.Event()
         self._monitor_thread: threading.Thread | None = None
-        self._current_page = "dashboard"
+        self._current_page = "home_audit"
         self._process_filter = ""
         self._service_filter = ""
         self._service_chip = "active"  # active | enabled | all
@@ -121,7 +121,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._build_ui()
         self._install_actions()
-        self._show_page("dashboard")
+        self._show_page("home_audit")
         # Non-blocking first paint: start monitoring after the window is mapped.
         GLib.idle_add(self._start_monitoring)
         GLib.timeout_add(700, self._check_startup_compatibility)
@@ -277,12 +277,12 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._page_builders = ui_pages.builders_for(self)
         self._built_pages: set[str] = set()
-        self._ensure_page("dashboard")
+        self._ensure_page("home_audit")
 
         layout = build_main_layout(
             nav_scroll,
             self._stack,
-            page_title=i18n.t("dashboard"),
+            page_title=page_titles().get("home_audit", i18n.t("home_audit")),
             lang=i18n.get_language(),
         )
         self._header_spinner = make_spinner(size=18)
@@ -307,7 +307,7 @@ class MainWindow(Adw.ApplicationWindow):
         )
         self._layout = layout
         self._toast_overlay.set_child(layout.widget)
-        self._nav_sidebar.select_page("dashboard", notify=False)
+        self._nav_sidebar.select_page("home_audit", notify=False)
 
     def _ensure_page(self, key: str) -> Gtk.Widget:
         child = self._stack.get_child_by_name(key)
@@ -2993,25 +2993,47 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.present(self)
 
     def _build_home_audit_page(self) -> Gtk.Widget:
+        from core import audit
+
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         box.set_margin_top(24)
         box.set_margin_start(24)
         box.set_margin_end(24)
         title = Gtk.Label(label=i18n.t("hub_audit_title"), xalign=0)
         title.add_css_class("title-1")
-        checklist = Gtk.Label(
-            label="• Mises à jour système\n• Pare-feu / ports\n• Secrets dans le home\n• Permissions fichiers sensibles",
-            xalign=0,
-            wrap=True,
-        )
+        data = audit.evaluate()
+        score = int(data.get("score") or 0)
+        score_lbl = Gtk.Label(label=i18n.t("audit_score", score=score), xalign=0)
+        score_lbl.add_css_class("title-2")
         box.append(title)
-        box.append(checklist)
+        box.append(score_lbl)
+        listbox = Gtk.ListBox()
+        listbox.add_css_class("boxed-list")
+        for item in data.get("checks") or []:
+            if not isinstance(item, dict):
+                continue
+            row = Gtk.ListBoxRow()
+            row.set_child(Gtk.Label(label=f"• {item.get('label', '')}", xalign=0, wrap=True))
+            listbox.append(row)
+        box.append(listbox)
+        actions = Gtk.Box(spacing=8)
+        for key, label_key in (("security", "security"), ("secrets", "secrets"), ("permissions", "permissions")):
+            btn = Gtk.Button(label=i18n.t(label_key))
+            btn.connect("clicked", lambda *_a, k=key: self._show_page(k))
+            actions.append(btn)
+        box.append(actions)
         return box
 
     def _build_secrets_page(self) -> Gtk.Widget:
         from ui.pages.secrets_page import SecretsPage
 
         page = SecretsPage(self, self._toast_overlay)
+        return page.widget
+
+    def _build_permissions_page(self) -> Gtk.Widget:
+        from ui.pages.permissions_page import PermissionsPage
+
+        page = PermissionsPage(self, self._toast_overlay)
         return page.widget
 
     def _on_close(self, *_args: Any) -> bool:

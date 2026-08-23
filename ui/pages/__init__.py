@@ -4,12 +4,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-PAGE_KEYS: tuple[str, ...] = ("home_audit", "security", "secrets")
+PAGE_KEYS: tuple[str, ...] = ("home_audit", "security", "secrets", "permissions")
 
 _BUILD_ATTR = {
     "home_audit": "_build_home_audit_page",
     "security": "_build_security_page",
     "secrets": "_build_secrets_page",
+    "permissions": "_build_permissions_page",
 }
 
 
