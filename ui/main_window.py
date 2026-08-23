@@ -2411,15 +2411,38 @@ class MainWindow(Adw.ApplicationWindow):
         score_lbl.add_css_class("title-2")
         box.append(title)
         box.append(score_lbl)
-        listbox = Gtk.ListBox()
-        listbox.add_css_class("boxed-list")
-        for item in data.get("checks") or []:
-            if not isinstance(item, dict):
+        groups = data.get("groups") or {}
+        for key, heading in (
+            ("warn", "audit_section_warn"),
+            ("info", "audit_section_info"),
+            ("ok", "audit_section_ok"),
+        ):
+            items = groups.get(key) or []
+            if not items:
                 continue
-            row = Gtk.ListBoxRow()
-            row.set_child(Gtk.Label(label=f"• {item.get('label', '')}", xalign=0, wrap=True))
-            listbox.append(row)
-        box.append(listbox)
+            section = Gtk.Label(label=i18n.t(heading), xalign=0)
+            section.add_css_class("heading")
+            box.append(section)
+            listbox = Gtk.ListBox()
+            listbox.add_css_class("boxed-list")
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                row = Adw.ActionRow()
+                row.set_title(str(item.get("label") or ""))
+                row.set_subtitle(str(item.get("id") or ""))
+                listbox.append(row)
+            box.append(listbox)
+        reco_title = Gtk.Label(label=i18n.t("audit_section_reco"), xalign=0)
+        reco_title.add_css_class("heading")
+        box.append(reco_title)
+        reco_box = Gtk.ListBox()
+        reco_box.add_css_class("boxed-list")
+        for line in data.get("recommendations") or []:
+            row = Adw.ActionRow()
+            row.set_title(str(line))
+            reco_box.append(row)
+        box.append(reco_box)
         actions = Gtk.Box(spacing=8)
         for key, label_key in (("security", "security"), ("secrets", "secrets"), ("permissions", "permissions")):
             btn = Gtk.Button(label=i18n.t(label_key))
