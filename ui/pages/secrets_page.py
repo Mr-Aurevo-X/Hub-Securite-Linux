@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Any
 
-from gi.repository import Gtk
+from gi.repository import Adw, Gtk
 
 from core import i18n
 from core import secretscan
@@ -15,7 +15,7 @@ class SecretsPage:
     def __init__(self, window: Gtk.Window, toast: Gtk.Widget) -> None:
         self._window = window
         self._toast = toast
-        self._root: Path | None = None
+        self._root: Path = Path.home()
         self._hits: list[secretscan.Hit] = []
         self.widget = self._build()
 
@@ -25,6 +25,9 @@ class SecretsPage:
         hint = Gtk.Label(label=i18n.t("secrets_hint"), wrap=True, xalign=0)
         hint.add_css_class("dim-label")
         box.append(hint)
+        self._path_lbl = Gtk.Label(label="", wrap=True, xalign=0, selectable=True)
+        self._path_lbl.add_css_class("title-2")
+        box.append(self._path_lbl)
         pick = Gtk.Button(label=i18n.t("pick_folder"))
         pick.connect("clicked", lambda *_: compat.select_folder(self._window, self._set_root))
         go = Gtk.Button(label=i18n.t("secrets_scan"))
@@ -37,11 +40,12 @@ class SecretsPage:
         self._ignore_entry.set_hexpand(True)
         ignore_btn = Gtk.Button(label=i18n.t("secrets_ignore"))
         ignore_btn.connect("clicked", lambda *_: self._ignore_selected())
+        self._folder_row = common.action_row(i18n.t("secrets_folder"), pick)
         box.append(
             common.prefs_group(
                 i18n.t("group_actions"),
                 [
-                    common.action_row(i18n.t("pick_folder"), pick),
+                    self._folder_row,
                     common.action_row(i18n.t("secrets_scan"), go),
                     common.action_row(i18n.t("secrets_export"), export_btn),
                     common.action_row(i18n.t("secrets_ignore_motif"), self._ignore_entry),
@@ -49,17 +53,23 @@ class SecretsPage:
                 ],
             )
         )
-        self._label = Gtk.Label(label="—", wrap=True, xalign=0)
-        box.append(self._label)
         self._list = Gtk.ListBox()
         self._list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self._list.add_css_class("boxed-list")
         box.append(common.scrolled(self._list))
+        self._show_root()
         return common.scrolled(box)
+
+    def _show_root(self) -> None:
+        path = str(self._root)
+        self._path_lbl.set_text(i18n.t("secrets_folder_current", path=path))
+        self._folder_row.set_title(i18n.t("secrets_folder"))
+        self._folder_row.set_subtitle(path)
 
     def _set_root(self, folder: Path) -> None:
         self._root = folder
-        self._label.set_text(str(folder))
+        self._show_root()
+        show_toast(self._toast, i18n.t("secrets_folder_current", path=str(folder)), 3)
 
     def _selected_hit(self) -> secretscan.Hit | None:
         row = self._list.get_selected_row()
@@ -80,20 +90,15 @@ class SecretsPage:
             self._list.append(row)
             return
         for hit in hits:
-            row = Gtk.ListBoxRow()
-            row.set_child(
-                Gtk.Label(
-                    label=f"{hit.path}:{hit.line}: {hit.rule}: {hit.excerpt}",
-                    xalign=0,
-                    wrap=True,
-                )
-            )
+            row = Adw.ActionRow()
+            row.set_title(f"{hit.rule} · {hit.path}:{hit.line}")
+            row.set_subtitle(hit.excerpt)
             self._list.append(row)
 
     def _scan(self) -> None:
         root = self._root
-        if root is None:
-            show_toast(self._toast, i18n.t("pick_folder"), 4)
+        if root is None or not root.is_dir():
+            show_toast(self._toast, i18n.t("secrets_folder_none"), 4)
             return
 
         def work() -> list[secretscan.Hit]:
@@ -105,7 +110,7 @@ class SecretsPage:
                 show_toast(self._toast, str(error), 6)
                 return
             self._fill_hits(list(result or []))
-            show_toast(self._toast, "OK")
+            show_toast(self._toast, i18n.t("secrets_folder_current", path=str(root)))
 
         run_in_thread(work, done)
 

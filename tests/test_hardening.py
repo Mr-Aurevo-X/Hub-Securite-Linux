@@ -41,19 +41,24 @@ def test_apply_chmod_ssh(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
     assert (key.stat().st_mode & 0o777) == 0o600
 
 
-def test_list_actions_from_report() -> None:
+def test_list_actions_always_has_catalog() -> None:
+    rows = hardening.list_actions({})
+    ids = [item["id"] for item in rows if item.get("actionable")]
+    assert ids == ["firewall_enable", "chmod_ssh", "chmod_home"]
+    assert all(item["actionable"] for item in rows)
+
+
+def test_list_actions_marks_audit_and_related() -> None:
     report = {
-        "actions": [
-            {
-                "id": "firewall_enable",
-                "check_id": "firewall",
-                "label": "fw",
-                "actionable": True,
-                "page": "security",
-            },
-            {"id": "", "check_id": "secrets", "label": "sec", "actionable": False, "page": "secrets"},
+        "checks": [
+            {"id": "firewall", "severity": "warn", "label": "fw down", "action": "firewall_enable", "page": "security"},
+            {"id": "secrets", "severity": "warn", "label": "sec", "page": "secrets"},
         ]
     }
     rows = hardening.list_actions(report)
-    assert rows[0]["actionable"] is True
-    assert rows[1]["page"] == "secrets"
+    by_id = {item["id"]: item for item in rows if item.get("id")}
+    assert by_id["firewall_enable"]["recommended"] is True
+    assert by_id["firewall_enable"]["label"] == "fw down"
+    related = [item for item in rows if item.get("page") == "secrets"]
+    assert related
+    assert related[0]["actionable"] is False

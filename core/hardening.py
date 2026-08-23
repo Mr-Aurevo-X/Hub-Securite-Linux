@@ -19,6 +19,12 @@ _TITLE_KEYS = {
     "chmod_home": "hardening_chmod_home",
 }
 
+_CHECK_FOR_ACTION = {
+    "firewall_enable": "firewall",
+    "chmod_ssh": "permissions",
+    "chmod_home": "world_writable",
+}
+
 
 class HardeningError(Exception):
     """Raised when a guided action is refused or fails."""
@@ -61,25 +67,53 @@ def action_title(action_id: str) -> str:
 
 def list_actions(report: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     data = report if isinstance(report, dict) else audit.load_last_result()
-    if not data:
-        return []
-    raw = data.get("actions")
-    if isinstance(raw, list) and raw:
-        out: list[dict[str, Any]] = []
-        for item in raw:
-            if not isinstance(item, dict):
-                continue
-            row = dict(item)
-            if row.get("id"):
-                row["title"] = action_title(str(row["id"]))
-            else:
-                row["title"] = str(row.get("label") or "")
-            out.append(row)
-        return out
-    return [
-        {**item, "title": action_title(str(item.get("id") or "")) if item.get("id") else str(item.get("label") or "")}
-        for item in audit.collect_actions(data.get("checks") if isinstance(data.get("checks"), list) else [])
-    ]
+    data = data if isinstance(data, dict) else {}
+    checks = {
+        str(item.get("id") or ""): item
+        for item in (data.get("checks") or [])
+        if isinstance(item, dict)
+    }
+    rows: list[dict[str, Any]] = []
+    seen_pages: set[str] = set()
+    for action_id in ACTION_IDS:
+        check = checks.get(_CHECK_FOR_ACTION[action_id], {})
+        severity = str(check.get("severity") or "")
+        if severity == "warn":
+            label = str(check.get("label") or i18n.t("hardening_recommended"))
+        elif check:
+            label = str(check.get("label") or i18n.t("hardening_ok_now"))
+        else:
+            label = i18n.t("hardening_ready")
+        rows.append(
+            {
+                "id": action_id,
+                "check_id": _CHECK_FOR_ACTION[action_id],
+                "title": action_title(action_id),
+                "label": label,
+                "actionable": True,
+                "page": "",
+                "recommended": severity == "warn",
+            }
+        )
+    for item in audit.collect_actions(list(checks.values())):
+        if item.get("actionable"):
+            continue
+        page = str(item.get("page") or "")
+        if not page or page in seen_pages:
+            continue
+        seen_pages.add(page)
+        rows.append(
+            {
+                "id": "",
+                "check_id": str(item.get("check_id") or ""),
+                "title": str(item.get("label") or page),
+                "label": i18n.t("hardening_related"),
+                "actionable": False,
+                "page": page,
+                "recommended": False,
+            }
+        )
+    return rows
 
 
 def _chmod_path(path: Path, mode: int) -> None:

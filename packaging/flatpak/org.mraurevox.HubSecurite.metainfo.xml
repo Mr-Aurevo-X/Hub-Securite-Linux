@@ -41,6 +41,11 @@
   </provides>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.2.1" date="2026-08-23">
+      <description>
+        <p>Durcissement : 3 actions toujours visibles + journal. Secrets : chemin du dossier affiché.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-08-23">
       <description>
         <p>Audit+ (diff, filtres, périphériques), durcissement guidé, FileGuard, certificats locaux, RepoRadar.</p>

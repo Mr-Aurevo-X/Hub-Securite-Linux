@@ -39,7 +39,7 @@ class HardeningPage:
         journal_title = Gtk.Label(label=i18n.t("hardening_journal"), xalign=0)
         journal_title.add_css_class("heading")
         box.append(journal_title)
-        self._journal = Gtk.Label(label="—", wrap=True, xalign=0)
+        self._journal = Gtk.Label(label=i18n.t("hardening_journal_empty"), wrap=True, xalign=0)
         self._journal.add_css_class("dim-label")
         box.append(self._journal)
         return common.scrolled(box)
@@ -54,6 +54,8 @@ class HardeningPage:
         start = getattr(page, "start_scan", None)
         if callable(start):
             start()
+            show_toast(self._toast, i18n.t("audit_scanning"), 3)
+            return
         self._goto("home_audit")
 
     def reload(self) -> None:
@@ -78,14 +80,19 @@ class HardeningPage:
                 btn.connect("clicked", lambda *_a, page=page_key: self._goto(page))
                 row.add_suffix(btn)
             self._list.append(row)
+        self._render_journal()
+
+    def _render_journal(self) -> None:
         journal = hardening.load_journal()
-        if journal:
-            last = journal[-5:]
-            self._journal.set_text(
-                "\n".join(f"{item.get('at')} · {item.get('id')} · {'ok' if item.get('ok') else 'fail'}" for item in last)
-            )
-        else:
-            self._journal.set_text("—")
+        if not journal:
+            self._journal.set_text(i18n.t("hardening_journal_empty"))
+            return
+        lines = []
+        for item in journal[-8:]:
+            title = hardening.action_title(str(item.get("id") or ""))
+            state = "ok" if item.get("ok") else "fail"
+            lines.append(f"{item.get('at')} · {title} · {state}")
+        self._journal.set_text("\n".join(lines))
 
     def _confirm_apply(self, item: dict[str, Any]) -> None:
         action_id = str(item.get("id") or "")
@@ -110,5 +117,9 @@ class HardeningPage:
                 return
             show_toast(self._toast, i18n.t("hardening_done"))
             self.reload()
+            page = getattr(self._window, "_audit_page", None)
+            start = getattr(page, "start_scan", None)
+            if callable(start):
+                start()
 
         run_in_thread(work, done)
