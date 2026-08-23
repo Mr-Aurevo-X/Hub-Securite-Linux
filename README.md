@@ -1,5 +1,8 @@
 # Hub Sécurité (Linux)
 
+> **WIP** — encore en développement. Pas une release publique.  
+> **WIP** — still in development. Not a public release.
+
 > **Dépôt privé** — reste privé pour le moment. Pas de canal public / Flathub.  
 > **Private repo** — stays private for now. No public channel / Flathub.
 
