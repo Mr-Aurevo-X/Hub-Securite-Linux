@@ -21,7 +21,7 @@ Mr-Aurevo-X **ne collecte aucune donnée personnelle**. Pas de compte, pas de t�
 - Stockage local : `~/.config/Mr-Aurevo-X/hubs/securite/`
 - **Vérif. versions au démarrage** (Préférences, activée par défaut, désactivable) : GET `api.github.com/repos/Mr-Aurevo-X/Hub-Securite-Linux/releases` (lecture seule). GitHub peut voir IP / User-Agent selon **sa** politique.
 - **Audit :** contrôles locaux (firewall, permissions, secrets, fail2ban, `ss`, AppArmor / SELinux, comptes). `checkupdates` (Arch) peut contacter les miroirs de paquets ; `pacman -Qqu` reste sur le cache local.
-- Dons : Discord / PayPal / Revolut, sur clic.
+- Dons : Discord / crypto (in-app), sur clic.
 
 Droit belge.
 
